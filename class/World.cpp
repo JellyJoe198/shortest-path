@@ -1,10 +1,8 @@
 /* CSCI261 Final Project: Shortest path
  * World class implementation - replaces Map.h
  *
- * Author: Joseph Brownlee
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
- * note: combining header and class here is a design decision
- * because there are relatively few functions.
  */
 
 #include "World.h"
@@ -25,7 +23,7 @@ const point<unsigned short> DEFAULT_POINT(0, INF);
 World::World(string fileName) {
 
     /* open file */
-    ifstream fin(fileName); // dev_outputSurface.txt is a test surface simpler than hgt files
+    ifstream fin(fileName);
     if (!fin.is_open()) {
         cerr << "unable to open surface file" << endl;
         _valid = false;
@@ -83,7 +81,7 @@ bool World::readSurface(char readType, ifstream &fin) {
     return true;
 }
 
-// generate empty map
+/// @brief generate empty map in surface
 /// @param rowSize size of row. @param colSize defaults to rowSize if not specified.
 void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
     if(!colSize)
@@ -91,6 +89,7 @@ void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
 
     // generate the empty surface
     _surface.resize(rowSize, vector<point<unsigned short>>(colSize, DEFAULT_POINT )); // create grid of proper size, defaulted to 0 height and infinite cost
+    _surface.shrink_to_fit(); // reduce memory usage
 }
 
 // get raw surface
@@ -100,16 +99,20 @@ const vector<vector<point<unsigned short>>> & World::getSurface() {
 }
 
 
-/** functions required for best path calculation **/
+/***** BEST PATH CALCULATION AND ITS REQUIRED FUNCTIONS *****/
 
 #include <cmath>
 
 double heightCoeff = 3; // exaggerate height change to encourage flatter paths
 
 // the shortest possible path between 2 points is a straight line.
+/// @brief find the cost of travelling from p1 to p2
+/// @param self
 template <typename Type>
-double straightLineDist(coord<Type> p1, coord<Type> p2) {
+double straightLineDist(const World& self, coord<Type> p1, coord<Type> p2) {
     if (p1 == p2) return 0;
+
+    self.getPointPtr();
 
     // verify points
     if (!p1.bothValid(p2)) {
@@ -118,22 +121,22 @@ double straightLineDist(coord<Type> p1, coord<Type> p2) {
     }
 
     // use Pythagoras to get distance between 2 points
-    return sqrt(
+    return sqrt (
             // use absolute value and long cast to make sure values don't wraparound when subtracting
             pow(abs((long)p1.x - (long)p2.x), 2)
             + pow(abs((long)p1.y - (long)p2.y), 2)
             + pow(abs((long)heightCoeff * p1.getHeight() - (long)heightCoeff * p2.getHeight()), 2)
-            );
+    );
 }
 
 // how short a path from start to finish can be if it goes through n.
 template <typename Type>
-long heuristic(coord<Type> start, coord<Type> mid, coord<Type> end) {
-    return 10*( straightLineDist(start, mid) + straightLineDist(mid, end));
+long heuristic(const World& self, coord<Type> start, coord<Type> mid, coord<Type> end) {
+    return 16*( straightLineDist(start, mid) + straightLineDist(mid, end)); // multiplied by 16 for extra precision
 }
 template <typename Type>
-long heuristic(coord<Type> start, coord<Type> end) { // shortcut: start to end = start to start to end
-    return heuristic(start, start, end);
+long heuristic(const World& self, coord<Type> start, coord<Type> end) { // shortcut: start to end = start to start to end
+    return heuristic(self, start, start, end);
 }
 
 //double sumScore(vector<coord<unsigned short>>);
@@ -141,7 +144,8 @@ long heuristic(coord<Type> start, coord<Type> end) { // shortcut: start to end =
 // get best path
 /// @desc use the A* algorithm to find the best path along member surface
 /// @return a vector of coordinates corresponding to nodes of the shortest path
-vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
+/// @status not working, points read as invalid height
+vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) const {
     // variables used: start, end, grid-surface
 
     vector<coord<unsigned short>> shortPath{start};
@@ -150,7 +154,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
     vector<coord<unsigned short>> openSet = {start}; // initially only start is known.
 
     start.setgScore(0); // gScore is the cost of the shortest known path from start to this node.
-    start.setfScore(heuristic(start,end)); // fScore is the cost of the shortest possible path through this node, using straight line calculations.
+    start.setfScore(heuristic(this, start,end)); // fScore is the cost of the shortest possible path through this node, using straight line calculations.
 
     while (!openSet.empty()) { // while openSet is not empty
 
@@ -174,7 +178,9 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // neighboring nodes of current
         vector<coord<unsigned short>> neighbors;
-        vector<coord<int8_t>> neighborOffsets = {{1, 0}, {0, 1}, {-1, 0}, {0, -1} };
+        vector<coord<int8_t>> neighborOffsets = {
+                {1, 0}, {0, 1}, {-1, 0}, {0, -1}
+        };
         for (auto offset : neighborOffsets) {
             coord<long> position(current.x + offset.x, current.y + offset.y);
             if( position.x < 0 || position.y < 0 || position.x >= _surface.size() || position.y >= _surface.front().size()) // make sure we don't count nodes outside our grid
@@ -199,7 +205,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
                 shortPath.push_back(neighbor);
                 neighbor.setgScore(tentative_gScore);
-                neighbor.setfScore(tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
+                neighbor.setfScore(tentative_gScore + heuristic(this, start, neighbor, end)); // make a guess of the short length through this node
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
@@ -219,4 +225,8 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
     } // end while openSet not empty
 
     return {};//vector<coord<unsigned short>>(0); // failure return is empty vector
+}
+
+point<unsigned short> * World::getPointPtr(coord<unsigned short> &position) const {
+    return & _surface.at(position.x).at(position.y);
 }

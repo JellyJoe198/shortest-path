@@ -1,9 +1,9 @@
-/* CSCI261 Final Project: Shortest path
+/* CSCI261 Final Project continuation: Best Path
  * main file
  *
- * Author: Joseph Brownlee (jmbrownlee)
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
- * see acknowledgements.md for resources used (Math Professors, other students, online forums, etc)
+ * see final.md/acknowledgements for resources used (Math Professors, other students, online forums, etc)
  */
 
 #include <iostream>
@@ -17,13 +17,21 @@ using namespace std;
 int main() {
 
     // create surface based on our file
-    World mountain("testSurface1.txt");
+    World mountain("testSurface1.txt");  // testSurface1.txt is simpler than hgt files fir testing
 
-    // debug: display surface 2D vector
-    for (const auto& row : mountain.getSurface()) {
-        for (const auto& point: row)
-            cout << point.getHeight() << ' ';
-        cout << endl;
+    // display surface 2D vector to console
+    bool doCoutSurface{true};
+    if (mountain.getSurface().size() > 5) {
+        cout << "Surface is larger than 5 rows. "
+                "Would you like to display it to this console? (1/0) ";
+        cin >> doCoutSurface;
+    }
+    if (doCoutSurface) {
+        for (const auto &row: mountain.getSurface()) {
+            for (const auto &point: row)
+                cout << point.getHeight() << ' ';
+            cout << endl;
+        }
     }
 
     // request start and end points
@@ -36,7 +44,7 @@ int main() {
     // calculate shortest path
     vector<coord<unsigned short>> path = mountain.getBestPath(start, end);
 
-    // debug: display shortest path
+    // display shortest path to console
     if (path.empty()) {
         cout << "could not find a valid path." << endl;
         return 0;

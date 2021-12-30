@@ -1,7 +1,7 @@
 /* CSCI261 Final Project: Shortest path
  * coord header and implementation (in place) file
  *
- * Author: Joseph Brownlee
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
  * Coordinate is a wrapper around a point to add location data.
  *  It is important to optimize for memory because there are at least 1442401 points in a full 3º input file.
@@ -55,22 +55,25 @@ public:
     }
 
     /** overloaded operators **/
-    // https://www.geeksforgeeks.org/overloading-stream-insertion-operators-c/
-    friend istream & operator >> (istream &in,  coord &c) {
-        in >> c.x >> c.y;
-        return in;
-    }
 
+    // check equality
     bool operator ==(const coord<pos_t>& rhs) const {
-        return bothValid(rhs) && x == rhs.x && y == rhs.y; // true if they're both _valid and the same point
+        return bothValid(rhs) && x == rhs.x && y == rhs.y; // true if they're both valid and the same point
     }
-
     bool operator !=(const coord<pos_t>& rhs) const {
         return ! (this == rhs);
     }
 
+    // memberwise multiplication by a constant
     coord<pos_t> operator *(const unsigned mult) const {
         return {valid() * x * mult, valid() * y * mult}; // 0,0 if invalid, otherwise returns coords, each multiplied.
+    }
+
+    // get both coordinates (x and y) from stream
+    // https://www.geeksforgeeks.org/overloading-stream-insertion-operators-c/
+    friend istream & operator >> (istream &in,  coord &coord) {
+        in >> coord.x >> coord.y;
+        return in;
     }
 };
 

@@ -1,10 +1,11 @@
 /* CSCI261 Final Project: Shortest path
  * point class header and implementation file
  *
- * Author: Joseph Brownlee
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
- * note the lack of location data in point, that is handled by the coord class.
- * note: defining functions in place here is required to allow templates to work properly.
+ * notes:
+ * - point does not contain location data, this is handled by the coord class to reduce memory usage.
+ * - defining functions in place here is required to allow templates to work properly.
  */
 
 #ifndef MAIN_CPP_POINT_HPP
@@ -19,13 +20,13 @@ private:
 //    bool _valid{0}; // height 0 reserved for invalid. (to save space)
 public:
     height_t getHeight() const { return _height; }
-    void setHeight(height_t height) { _height = height; }
+    void setHeight(height_t height) {   _height = height; }
 
     score_t getfScore() const { return _fScore; }
-    void setfScore(score_t fScore) { _fScore = fScore; }
+    void setfScore(score_t fScore) {   _fScore = fScore; }
 
     score_t getgScore() const { return _gScore; }
-    void setgScore(score_t gScore) { _gScore = gScore; }
+    void setgScore(score_t gScore) {   _gScore = gScore; }
 
     // construction
     point() = default;
