@@ -20,9 +20,10 @@ template <typename pos_t = unsigned, typename p_height_t = unsigned short, typen
 struct coord {
 public:
     pos_t x, y; // location of point, such as in a grid
-    point<p_height_t, p_score_t> point; // todo make point a pointer to increase speed & streamline value population from grids.
+    mutable point<p_height_t, p_score_t> *point; // todo make point a pointer to increase speed & streamline value population from grids.
+
     // constructors
-    coord() {x = 0; y = 0;}
+    coord() {x = 0; y = 0; &point = nullptr;}
     coord(pos_t x, pos_t y) { x = x; y = y;}
 
     /* basic getters and setters */
@@ -53,6 +54,9 @@ public:
     bool bothValid(const coord<pos_t>& rhs) const {
         return valid() && rhs.valid(); // true if both valid
     }
+
+    // display as text
+
 
     /** overloaded operators **/
     // https://www.geeksforgeeks.org/overloading-stream-insertion-operators-c/

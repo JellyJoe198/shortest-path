@@ -2,21 +2,19 @@
  * World class implementation - replaces Map.h
  *
  * Author: Joseph Brownlee
- *
- * note: combining header and class here is a design decision
- * because there are relatively few functions.
  */
 
 #include "World.h"
 
-#include <fstream>
-#include <iostream>
-#include <sstream>  // used in extraction of spaced file streams
+#include <fstream>  // fin
+#include <iostream> // cout
+#include <sstream>   // used in extraction of spaced file streams, hopefully not needed for hgt files
+#include <cmath>
 //#include <string>
 //#include <vector>
 using namespace std;
 
-
+// mapping constants
 const unsigned short INF = (unsigned short)(~0); // infinity https://stackoverflow.com/a/47434423
 const point<unsigned short> DEFAULT_POINT(0, INF);
 
@@ -76,7 +74,7 @@ bool World::readSurface(char readType, ifstream &fin) {
 
     // handling of warning cases
     if (linesInconsistentLength)
-        cout << "Warning (important): lines in surface file are of inconsistent length." << endl;
+        cout << "Warning (important!): lines in surface file are of inconsistent length!" << endl;
     if (emptyLines)
         cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
 
@@ -102,45 +100,51 @@ const vector<vector<point<unsigned short>>> & World::getSurface() {
 
 /** functions required for best path calculation **/
 
-#include <cmath>
-
-double heightCoeff = 3; // exaggerate height change to encourage flatter paths
+double heightCoeff = 3; // exaggerate height changes to encourage flatter paths
 
 // the shortest possible path between 2 points is a straight line.
 template <typename Type>
-double straightLineDist(coord<Type> p1, coord<Type> p2) {
-    if (p1 == p2) return 0;
+double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) const {
+    if (c1 == c2) return 0;
 
-    // verify points
-    if (!p1.bothValid(p2)) {
-        cout << "Warning (code bug): a node has invalid height" << endl;
-        return INF; // invalid height means node distance cannot be properly calculated.
+    // verify and autofill relevant heights
+    for (const auto& coord : {c1, c2}) {
+        if (!coord.valid()) {
+            coord.point->setHeight(
+                    _surface.at(coord.x).at(coord.y).getHeight() ); // retrieve this point's height from _surface
+        }
+
+        if (!coord.valid()) {
+            cout << "Warning: could not find height of coordinate " << coord.x << ' ' << coord.y << endl;
+            return INF; // invalid height means node distance cannot be properly calculated, infinity avoids this node.
+        }
     }
 
     // use Pythagoras to get distance between 2 points
     return sqrt(
-            // use absolute value and long cast to make sure values don't wraparound when subtracting
-            pow(abs((long)p1.x - (long)p2.x), 2)
-            + pow(abs((long)p1.y - (long)p2.y), 2)
-            + pow(abs((long)heightCoeff * p1.getHeight() - (long)heightCoeff * p2.getHeight()), 2)
+            // using absolute value and long cast to ensure values don't wraparound when subtracting
+            pow(abs((long)c1.x - (long)c2.x), 2)
+            + pow(abs((long)c1.y - (long)c2.y), 2)
+            + pow(abs((long)heightCoeff * c1.getHeight() - (long)heightCoeff * c2.getHeight()), 2)
             );
 }
 
 // how short a path from start to finish can be if it goes through n.
 template <typename Type>
-long heuristic(coord<Type> start, coord<Type> mid, coord<Type> end) {
+long World::heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end) {
     return 10*( straightLineDist(start, mid) + straightLineDist(mid, end));
 }
 template <typename Type>
-long heuristic(coord<Type> start, coord<Type> end) { // shortcut: start to end = start to start to end
+long World::heuristic(const coord<Type>& start, const coord<Type>& end) { // shortcut: start to end = start to start to end
     return heuristic(start, start, end);
 }
 
 //double sumScore(vector<coord<unsigned short>>);
 
-// get best path
-/// @desc use the A* algorithm to find the best path along member surface
+// best path calculation
+/// @desc use the A* algorithm to find the best path along _surface
 /// @return a vector of coordinates corresponding to nodes of the shortest path
+/// @params start and end are zero-indexed coordinates (x y) corresponding to position on _surface.
 vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
     // variables used: start, end, grid-surface
 
@@ -172,16 +176,31 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 //            return reconstruct_path(cameFrom, current);
         }
 
-        // neighboring nodes of current
+        // neighboring nodes of current node
         vector<coord<unsigned short>> neighbors;
-        vector<coord<int8_t>> neighborOffsets = {{1, 0}, {0, 1}, {-1, 0}, {0, -1} };
-        for (auto offset : neighborOffsets) {
-            coord<long> position(current.x + offset.x, current.y + offset.y);
-            if( position.x < 0 || position.y < 0 || position.x >= _surface.size() || position.y >= _surface.front().size()) // make sure we don't count nodes outside our grid
-                neighbors.emplace_back(position.x, position.y); // add into neighbors vector
+        const int offX[] = {1, 0, -1, 0};
+        const int offY[] = {0, 1, 0, -1};
+        for (int i = 0; i < 4; ++i) {
+            const auto posX = current.x + offX[i];
+            const auto posY = current.y + offY[i];
+            // ensure node is in range, then add it to list of neighbors.
+            if (posX < 0 && posY < 0 && posX >= _surface.size() && posY >= _surface.at(posX).size() ) {
+                neighbors.push_back(coord<unsigned short>(posX, posY));
+            }
         }
 
+//        vector<coord<short>> neighborOffsets = { {1, 0}, {0, 1}, {-1, 0}, {0, -1} };
+//        for (const auto& offset : neighborOffsets) {
+//            coord<long> pos(current.x + offset.x, current.y + offset.y);
+//            if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
+//                neighbors.push_back( coord<unsigned short>(pos.x, pos.y) ); // add into neighbors vector
+//        }
+
         openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
+        //debug display openset
+        for (const auto &item : openSet) {
+            cout << item.x << ' ' << item.y << endl;
+        }
 
         // populate height values from _surface for relevant points
         if(!current.valid())
@@ -192,8 +211,8 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
         }
 
         // find the neighbor of current with the lowest score
-        for (auto &neighbor: neighbors) { // for each neighbor of current
-            unsigned short tentative_gScore = current.getgScore() + (unsigned short)round(straightLineDist(current, neighbor) );
+        for (auto &neighbor: neighbors) { // for each neighbor of current node
+            unsigned short tentative_gScore = current.getgScore() + (unsigned short)round( straightLineDist(current, neighbor) );
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
@@ -203,7 +222,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
-                for (const auto &item : openSet) { // go through openSet and check if neighbor is there
+                for (const auto& item : openSet) { // go through openSet and check if neighbor is there
                     if (neighbor == item) {
                         inSet = true;
                         break;
@@ -211,7 +230,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 }
                 if (!inSet)
                     openSet.push_back(neighbor);
-                openSet.push_back(neighbor);
+                openSet.push_back(neighbor); //debug
             } // end found smaller
 
         } // end for neighbors

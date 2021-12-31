@@ -28,7 +28,11 @@ public:
     void setgScore(score_t gScore) { _gScore = gScore; }
 
     // construction
-    point() = default;
+    point() {
+        _fScore = 0;
+        _gScore = 0;
+        _height = 0;
+    }
     explicit point(height_t height, score_t score) {
         _fScore = score;
         _gScore = score;
