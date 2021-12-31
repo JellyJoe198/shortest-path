@@ -3,8 +3,9 @@
  *
  * Author: Joseph Brownlee
  *
- * note the lack of location data in point, that is handled by the coord class.
- * note: defining functions in place here is required to allow templates to work properly.
+ * notes:
+ * - point does not contain location data, this is handled by the coord class to reduce memory usage.
+ * - defining functions in place here is required to allow templates to work properly.
  */
 
 #ifndef MAIN_CPP_POINT_HPP

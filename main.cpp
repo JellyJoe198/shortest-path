@@ -7,6 +7,7 @@
  */
 
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -22,7 +23,7 @@ int main() {
     // debug: display surface 2D vector
     for (const auto& row : mountain.getSurface()) {
         for (const auto& point: row)
-            cout << point.getHeight() << ' ';
+            cout << setw(5) << point.getHeight() << ' ';
         cout << endl;
     }
 

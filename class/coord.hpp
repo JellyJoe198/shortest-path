@@ -20,23 +20,14 @@ template <typename pos_t = unsigned, typename p_height_t = unsigned short, typen
 struct coord {
 public:
     pos_t x, y; // location of point, such as in a grid
-    mutable point<p_height_t, p_score_t> *point; // todo make point a pointer to increase speed & streamline value population from grids.
+    mutable point<p_height_t, p_score_t> point; // todo make point a pointer to increase speed & streamline value population from grids.
 
     // constructors
-    coord() {x = 0; y = 0; &point = nullptr;}
-    coord(pos_t x, pos_t y) { x = x; y = y;}
+    coord() { this->x = 0; this->y = 0;}
+    coord(pos_t x, pos_t y) { this->x = x; this->y = y;}
+    coord(pos_t x, pos_t y, p_score_t score) { this->x = x; this->y = y; this->point.setgScore(score); this->point.setfScore(score);}
 
-    /* basic getters and setters */
-//    unsigned int getX() const { return _x; }
-//    void setX(unsigned int x) { _x = x; }
-//
-//    unsigned int getY() const { return _y; }
-//    void setY(unsigned int y) { _y = y; }
-//
-//    const point<p_height_t, p_score_t> &getPoint() const { return _point; }
-//    void setPoint(const point<p_height_t, p_score_t> &point) { _point = point; }
-
-    // point shortcut getters
+    /* point shortcut getters */
     p_score_t getHeight() const { return point.getHeight(); }
     void setHeight(p_height_t height) {point.setHeight(height); }
 
@@ -55,27 +46,44 @@ public:
         return valid() && rhs.valid(); // true if both valid
     }
 
-    // display as text
-
-
     /** overloaded operators **/
+
+    // extract 2 items from stream
     // https://www.geeksforgeeks.org/overloading-stream-insertion-operators-c/
     friend istream & operator >> (istream &in,  coord &c) {
         in >> c.x >> c.y;
         return in;
     }
 
+    // equality
     bool operator ==(const coord<pos_t>& rhs) const {
-        return bothValid(rhs) && x == rhs.x && y == rhs.y; // true if they're both _valid and the same point
+        return bothValid(rhs)
+           && this->x == rhs.x
+           && this->y == rhs.y; // true if they're both valid and the same point
     }
+//    bool operator !=(const coord<pos_t>& rhs) const {
+//        return !(this == rhs);
+//    }
 
-    bool operator !=(const coord<pos_t>& rhs) const {
-        return ! (this == rhs);
-    }
-
+    /// @brief memberwise multiply by a constant
+    /// @returns 0,0 if invalid, otherwise returns coords, each multiplied.
     coord<pos_t> operator *(const unsigned mult) const {
-        return {valid() * x * mult, valid() * y * mult}; // 0,0 if invalid, otherwise returns coords, each multiplied.
+        return { valid() * this->x * mult,
+                 valid() * this->y * mult};
     }
+
+    /// @brief memberwise addition of two coordinates
+    /// @returns 0,0 if invalid, otherwise returns coords added
+    template <typename Type>
+    coord<pos_t> operator +(const coord<Type>& rhs) const {
+        return { valid() * (pos_t)(this->x + rhs.x) ,
+                 valid() * (pos_t)(this->y + rhs.y) };
+    }
+
+//    /* type conversions */
+//    explicit operator unsigned short() const {
+//        return x, y;
+//    }
 };
 
 

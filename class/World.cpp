@@ -110,13 +110,16 @@ double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) con
     // verify and autofill relevant heights
     for (const auto& coord : {c1, c2}) {
         if (!coord.valid()) {
-            coord.point->setHeight(
+            coord.point.setHeight(
                     _surface.at(coord.x).at(coord.y).getHeight() ); // retrieve this point's height from _surface
         }
 
         if (!coord.valid()) {
             cout << "Warning: could not find height of coordinate " << coord.x << ' ' << coord.y << endl;
-            return INF; // invalid height means node distance cannot be properly calculated, infinity avoids this node.
+
+            // invalid height means distance to this node cannot be properly calculated.
+            // Infinity means this node will be avoided as long as there are other valid nodes around.
+            return INF;
         }
     }
 
@@ -126,7 +129,7 @@ double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) con
             pow(abs((long)c1.x - (long)c2.x), 2)
             + pow(abs((long)c1.y - (long)c2.y), 2)
             + pow(abs((long)heightCoeff * c1.getHeight() - (long)heightCoeff * c2.getHeight()), 2)
-            );
+        );
 }
 
 // how short a path from start to finish can be if it goes through n.
@@ -160,17 +163,17 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // find node in openSet having the lowest fScore
         int cPos = 0; // position of lowest node
-        coord<unsigned short> current = openSet.at(0); // will contain the node in openSet of the lowest fScore
+        coord<unsigned short> currentNode = openSet.at(0); // will contain the node in openSet of the lowest fScore
         for (int i = 0; i < openSet.size(); ++i) {
             auto node = openSet[i];
-            if (node.getfScore() < current.getfScore()) {
-                current = node;
+            if (node.getfScore() < currentNode.getfScore()) {
+                currentNode = node;
                 cPos = i;
             }
         }
 
         // stopping condition: path reaches end
-        if (current == end) { // if this node is the end node, return the path to this node
+        if (currentNode == end) { // if this node is the end node, return the path to this node
             shortPath.push_back(end);
             return shortPath;
 //            return reconstruct_path(cameFrom, current);
@@ -178,33 +181,25 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // neighboring nodes of current node
         vector<coord<unsigned short>> neighbors;
-        const int offX[] = {1, 0, -1, 0};
-        const int offY[] = {0, 1, 0, -1};
-        for (int i = 0; i < 4; ++i) {
-            const auto posX = current.x + offX[i];
-            const auto posY = current.y + offY[i];
-            // ensure node is in range, then add it to list of neighbors.
-            if (posX < 0 && posY < 0 && posX >= _surface.size() && posY >= _surface.at(posX).size() ) {
-                neighbors.push_back(coord<unsigned short>(posX, posY));
+        const coord<short> offsets[] = {
+                {1,0}, {0,1}, {-1,0}, {0,-1}};
+        for (const auto& offset : offsets) {
+            const coord<unsigned short> pos (currentNode.x + offset.x, currentNode.y + offset.y, INF);
+            if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
+            {} else {
+                neighbors.push_back(pos);
             }
         }
 
-//        vector<coord<short>> neighborOffsets = { {1, 0}, {0, 1}, {-1, 0}, {0, -1} };
-//        for (const auto& offset : neighborOffsets) {
-//            coord<long> pos(current.x + offset.x, current.y + offset.y);
-//            if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
-//                neighbors.push_back( coord<unsigned short>(pos.x, pos.y) ); // add into neighbors vector
+        openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
+//        //debug display openSet
+//        for (const auto &item : openSet) {
+//            cout << item.x << ' ' << item.y << endl;
 //        }
 
-        openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
-        //debug display openset
-        for (const auto &item : openSet) {
-            cout << item.x << ' ' << item.y << endl;
-        }
-
         // populate height values from _surface for relevant points
-        if(!current.valid())
-            current.setHeight(_surface.at(current.x).at(current.y).getHeight()); // retrieve height from surface
+        if(!currentNode.valid())
+            currentNode.setHeight(_surface.at(currentNode.x).at(currentNode.y).getHeight()); // retrieve height from surface
         for (auto &neighbor: neighbors) { // populate all neighbors
             if (!neighbor.valid())
                 neighbor.setHeight(_surface.at(neighbor.x).at(neighbor.y).getHeight());
@@ -212,7 +207,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // find the neighbor of current with the lowest score
         for (auto &neighbor: neighbors) { // for each neighbor of current node
-            unsigned short tentative_gScore = current.getgScore() + (unsigned short)round( straightLineDist(current, neighbor) );
+            unsigned short tentative_gScore = currentNode.getgScore() + (unsigned short)round(straightLineDist(currentNode, neighbor) );
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
@@ -230,7 +225,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 }
                 if (!inSet)
                     openSet.push_back(neighbor);
-                openSet.push_back(neighbor); //debug
+//                openSet.push_back(neighbor); //debug
             } // end found smaller
 
         } // end for neighbors
