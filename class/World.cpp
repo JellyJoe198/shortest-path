@@ -66,12 +66,15 @@ int World::readSurface(char readType, ifstream &fin) {
 
             _surface.resize(_surface.size() + 1); // make space in grid for another row
         }
-        else {
+        else { // line is empty
             emptyLines = true;
-            continue; // if line is empty, skip over it
+            continue; // skip over this line
         }
 
-        if (isspace(line[0])){continue;}
+        if (isspace(line[0])) { // line only contains whitespace
+            emptyLines = true;
+            continue; // skip over this line
+        }
 
         // add line to vector
         unsigned height;
@@ -172,7 +175,7 @@ long World::heuristic(const coord<Type>& start, const coord<Type>& end) { // sho
 vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
     // variables used: start, end, grid-surface
 
-    vector<coord<unsigned short>> shortPath{start};
+    vector<coord<unsigned short>> nodeHistory{start};
 
     // The set of discovered nodes that may need to be (re-)expanded.
     vector<coord<unsigned short>> openSet = {start}; // initially only start is known.
@@ -195,8 +198,8 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // stopping condition: path reaches end
         if (currentNode == end) { // if this node is the end node, return the path to this node
-            shortPath.push_back(end);
-            return shortPath;
+            nodeHistory.push_back(end);
+            return nodeHistory;
 //            return reconstruct_path(cameFrom, current);
         }
 
@@ -228,7 +231,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
-                shortPath.push_back(neighbor);
+                nodeHistory.push_back(neighbor);
                 neighbor.setgScore(tentative_gScore);
                 neighbor.setfScore(tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
 
@@ -267,6 +270,7 @@ void World::exportSurface(ostream& output) const {
 }
 
 void World::displaySurface(char dispType = 'd') const {
-    cout << "not implemented." << endl;
+    cout << "not implemented. displaying surface to cout." << endl;
+    this->exportSurface(cout);
 }
 
