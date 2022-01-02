@@ -3,8 +3,9 @@
  *
  * Author: Joseph Brownlee
  *
- * note the lack of location data in point, that is handled by the coord class.
- * note: defining functions in place here is required to allow templates to work properly.
+ * notes:
+ * - point does not contain location data, this is handled by the coord class to reduce memory usage.
+ * - defining functions in place here is required to allow templates to work properly.
  */
 
 #ifndef MAIN_CPP_POINT_HPP
@@ -28,7 +29,11 @@ public:
     void setgScore(score_t gScore) { _gScore = gScore; }
 
     // construction
-    point() = default;
+    point() {
+        _fScore = 0;
+        _gScore = 0;
+        _height = 0;
+    }
     explicit point(height_t height, score_t score) {
         _fScore = score;
         _gScore = score;

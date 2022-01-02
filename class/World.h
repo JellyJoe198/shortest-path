@@ -2,9 +2,6 @@
  * World class header - replaces Map.h
  *
  * Author: Joseph Brownlee
- *
- * note: combining header and class here is a design decision
- * because there are relatively few functions.
  */
 
 #ifndef MAIN_CPP_WORLD_H
@@ -26,9 +23,18 @@ private:
     void generateMap(unsigned rowSize, unsigned colSize);
 
     bool readSurface(char readType, ifstream &fin);
+
+    /* best path calculations */
+    template <typename Type>
+    double straightLineDist(const coord<Type>& c1, const coord<Type>& c2) const ;
+    template <typename Type>
+    long heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end);
+    template <typename Type>
+    long heuristic(const coord<Type>& start, const coord<Type>& end);
+
 public:
 
-    World() = default;
+//    World() = default;
     explicit World(string fileName);
     vector<coord<unsigned short>> getBestPath(coord<unsigned short> start, coord<unsigned short> end);
     const vector<vector<point<unsigned short>>> & getSurface();
