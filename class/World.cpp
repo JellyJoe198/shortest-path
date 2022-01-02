@@ -7,9 +7,10 @@
 #include "World.h"
 
 #include <fstream>  // fin
-#include <iostream> // cout
+#include <iomanip>
 #include <sstream>   // used in extraction of spaced file streams, hopefully not needed for hgt files
 #include <cmath>
+//#include <iostream> // cout
 //#include <string>
 //#include <vector>
 using namespace std;
@@ -30,17 +31,31 @@ World::World(string fileName) {
         return;
     }
 
-    /* read file as our surface */
-    readSurface('s', fin);
+    // read file as surface
+    auto err = readSurface('s', fin);
 
-//    generateMap(2);
+    // handle errors: use bitwise logic to check if each possible error occurred
+        // this is inefficient I just wanted to see if I could
+    if (err & 0x1000)
+        cout << "WARNING (important): lines in surface file are of inconsistent length!" << endl;
+    if (err & 0x0100)
+        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
+
+    _valid = !(err&0x1000); // surface is only valid if there are no important errors
 }
 
-bool World::readSurface(char readType, ifstream &fin) {
-//    vector<vector< point<unsigned short> >> _surface; // temporary grid to store surface
+/// @brief reads surface from given file stream
+/// @param readType not implemented @param fin valid file stream from which to read surface
+/// @returns error codes:
+///     \n 0x1000: linesInconsistentLength
+///     \n 0x0100: emptyLines
+int World::readSurface(char readType, ifstream &fin) {
 
     /* read data */
-    bool linesInconsistentLength{0}, emptyLines{0}; // data verification/warning trackers
+    // data verification/warning trackers
+    bool linesInconsistentLength    {false},
+         emptyLines                 {false};
+
     while (!fin.eof()) {
         // get each line from file
         string line;
@@ -48,12 +63,15 @@ bool World::readSurface(char readType, ifstream &fin) {
             // verify that line has contents
             if (line.empty())
                 continue;
+
             _surface.resize(_surface.size() + 1); // make space in grid for another row
         }
         else {
             emptyLines = true;
             continue; // if line is empty, skip over it
         }
+
+        if (isspace(line[0])){continue;}
 
         // add line to vector
         unsigned height;
@@ -72,16 +90,19 @@ bool World::readSurface(char readType, ifstream &fin) {
 
     } // end while
 
-    // handling of warning cases
-    if (linesInconsistentLength)
-        cout << "Warning (important!): lines in surface file are of inconsistent length!" << endl;
-    if (emptyLines)
-        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
+//    // handling of warning cases
+//    if (linesInconsistentLength)    // 0x1000
+//        cout << "Warning (important!): lines in surface file are of inconsistent length!" << endl;
+//    if (emptyLines)                 // 0x0100
+//        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
 
-    return true;
+    return (0x0000 // each bit corresponds to a different error.
+       +0x1000 * linesInconsistentLength
+       +0x0100 * emptyLines
+    );
 }
 
-// generate empty map
+/// @brief generate empty map
 /// @param rowSize size of row. @param colSize defaults to rowSize if not specified.
 void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
     if(!colSize)
@@ -93,7 +114,7 @@ void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
 
 // get raw surface
 /// @returns constant reference to surface (to avoid copying large data)
-const vector<vector<point<unsigned short>>> & World::getSurface() {
+const vector<vector<point<unsigned short>>> & World::getSurface() const {
     return _surface;
 }
 
@@ -192,10 +213,6 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
         }
 
         openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
-//        //debug display openSet
-//        for (const auto &item : openSet) {
-//            cout << item.x << ' ' << item.y << endl;
-//        }
 
         // populate height values from _surface for relevant points
         if(!currentNode.valid())
@@ -234,3 +251,22 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
     return {};//vector<coord<unsigned short>>(0); // failure return is empty vector
 }
+
+bool World::valid() const {
+    return _valid;
+}
+
+/// send all points of surface to ostream.
+/// default display: each item evenly spaced and each row on new line
+void World::exportSurface(ostream& output) const {
+    for (const auto& row : this->getSurface()) {
+        for (const auto& point: row)
+            output << setw(5) << point.getHeight() << ' ';
+        output << endl;
+    }
+}
+
+void World::displaySurface(char dispType = 'd') const {
+    cout << "not implemented." << endl;
+}
+

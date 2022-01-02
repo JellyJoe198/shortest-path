@@ -7,6 +7,7 @@
 #ifndef MAIN_CPP_WORLD_H
 #define MAIN_CPP_WORLD_H
 
+#include <iostream>
 #include <vector>
 #include <string>
 using namespace std;
@@ -15,14 +16,25 @@ using namespace std;
 #include "coord.hpp"
 
 class World {
+public:
+
+    explicit World(string fileName); // constructor
+
+    bool valid() const;
+
+    vector<coord<unsigned short>> getBestPath(coord<unsigned short> start, coord<unsigned short> end);
+
+    /* surface accessors */
+    const vector<vector<point<unsigned short>>> & getSurface() const; // raw vector
+    void exportSurface(ostream& output) const; // export surface as text to given stream
+    void displaySurface(char dispType) const; // display to window
+
 private:
-//    static const unsigned INF;
-//    static const point<unsigned short> DEFAULT_POINT;
     bool _valid {false};
     vector<vector<point<unsigned short>>> _surface; // 2D vector of points with location, _height, score, etc. data
     void generateMap(unsigned rowSize, unsigned colSize);
 
-    bool readSurface(char readType, ifstream &fin);
+    int readSurface(char readType, ifstream &fin);
 
     /* best path calculations */
     template <typename Type>
@@ -31,13 +43,6 @@ private:
     long heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end);
     template <typename Type>
     long heuristic(const coord<Type>& start, const coord<Type>& end);
-
-public:
-
-//    World() = default;
-    explicit World(string fileName);
-    vector<coord<unsigned short>> getBestPath(coord<unsigned short> start, coord<unsigned short> end);
-    const vector<vector<point<unsigned short>>> & getSurface();
 };
 
 
