@@ -1,5 +1,5 @@
 /* CSCI261 Final Project: Shortest path
- * World class header - replaces Map.h
+ * World class header
  *
  * Author: Joseph Brownlee
  */
@@ -18,7 +18,7 @@ using namespace std;
 class World {
 public:
 
-    explicit World(string fileName); // constructor
+    explicit World(const string& fileName); // constructor
 
     bool valid() const;
 
@@ -30,19 +30,19 @@ public:
     void displaySurface(char dispType) const; // display to window
 
 private:
+    vector<vector<point<unsigned short>>> _surface; // 2D map of points with height and score data
     bool _valid {false};
-    vector<vector<point<unsigned short>>> _surface; // 2D vector of points with location, _height, score, etc. data
-    void generateMap(unsigned rowSize, unsigned colSize);
 
     int readSurface(char readType, ifstream &fin);
+    void generateMap(unsigned rowSize, unsigned colSize);
 
     /* best path calculations */
-    template <typename Type>
-    double straightLineDist(const coord<Type>& c1, const coord<Type>& c2) const ;
-    template <typename Type>
-    long heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end);
-    template <typename Type>
-    long heuristic(const coord<Type>& start, const coord<Type>& end);
+    template <typename T>
+    double straightLineDist(coord<T> &c1, coord<T> &c2);
+    template <typename T>
+    long heuristic(coord<T>& start, coord<T>& mid, coord<T>& end);
+    template <typename T>
+    long heuristic(coord<T>& start, coord<T>& end);
 };
 
 

@@ -21,7 +21,7 @@ const point<unsigned short> DEFAULT_POINT(0, INF);
 
 /// @desc constructor of World data from file
 /// @param fileName the name of the file to open (including extension)
-World::World(string fileName) {
+World::World(const string& fileName) {
 
     /* open file */
     ifstream fin(fileName); // dev_outputSurface.txt is a test surface simpler than hgt files
@@ -47,8 +47,8 @@ World::World(string fileName) {
 /// @brief reads surface from given file stream
 /// @param readType not implemented @param fin valid file stream from which to read surface
 /// @returns error codes:
-///     \n 0x1000: linesInconsistentLength
-///     \n 0x0100: emptyLines
+///     \n 0x1000: IMPORTANT linesInconsistentLength
+///     \n 0x0100: warn emptyLines
 int World::readSurface(char readType, ifstream &fin) {
 
     /* read data */
@@ -127,19 +127,19 @@ const vector<vector<point<unsigned short>>> & World::getSurface() const {
 double heightCoeff = 3; // exaggerate height changes to encourage flatter paths
 
 // the shortest possible path between 2 points is a straight line.
-template <typename Type>
-double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) const {
+template <typename T>
+double World::straightLineDist(coord<T> &c1, coord<T> &c2) {
     if (c1 == c2) return 0;
-
     // verify and autofill relevant heights
-    for (const auto& coord : {c1, c2}) {
-        if (!coord.valid()) {
-            coord.point.setHeight(
-                    _surface.at(coord.x).at(coord.y).getHeight() ); // retrieve this point's height from _surface
-        }
+    for (auto& crd : {c1, c2}) {
+        crd.populatePoint(_surface);
+//        if (!crd.valid()) {
+//            crd.setHeight(
+//                    _surface.at(crd.x).at(crd.y).getHeight() ); // retrieve this point's height from _surface
+//        }
 
-        if (!coord.valid()) {
-            cout << "Warning: could not find height of coordinate " << coord.x << ' ' << coord.y << endl;
+        if (!crd.valid()) {
+            cout << "Warning: could not find height of coordinate " << crd.x << ' ' << crd.y << endl;
 
             // invalid height means distance to this node cannot be properly calculated.
             // Infinity means this node will be avoided as long as there are other valid nodes around.
@@ -157,19 +157,19 @@ double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) con
 }
 
 // how short a path from start to finish can be if it goes through n.
-template <typename Type>
-long World::heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end) {
+template <typename T>
+long World::heuristic(coord<T>& start, coord<T>& mid, coord<T>& end) {
     return 10*( straightLineDist(start, mid) + straightLineDist(mid, end));
 }
-template <typename Type>
-long World::heuristic(const coord<Type>& start, const coord<Type>& end) { // shortcut: start to end = start to start to end
+template <typename T>
+long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to end = start to start to end
     return heuristic(start, start, end);
 }
 
 //double sumScore(vector<coord<unsigned short>>);
 
 // best path calculation
-/// @desc use the A* algorithm to find the best path along _surface
+/// @desc find the best path along _surface using A* algorithm
 /// @return a vector of coordinates corresponding to nodes of the shortest path
 /// @params start and end are zero-indexed coordinates (x y) corresponding to position on _surface.
 vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
@@ -203,7 +203,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 //            return reconstruct_path(cameFrom, current);
         }
 
-        // neighboring nodes of current node
+        // get neighboring nodes of current node
         vector<coord<unsigned short>> neighbors;
         const coord<short> offsets[] = {
                 {1,0}, {0,1}, {-1,0}, {0,-1}};
@@ -218,14 +218,17 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
         openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
 
         // populate height values from _surface for relevant points
-        if(!currentNode.valid())
-            currentNode.setHeight(_surface.at(currentNode.x).at(currentNode.y).getHeight()); // retrieve height from surface
+        currentNode.populatePoint(_surface);
+//        if(!currentNode.valid()) {
+//            currentNode.setHeight(_surface.at(currentNode.x).at(currentNode.y).getHeight()); // retrieve height from surface
+//        }
         for (auto &neighbor: neighbors) { // populate all neighbors
-            if (!neighbor.valid())
-                neighbor.setHeight(_surface.at(neighbor.x).at(neighbor.y).getHeight());
+            neighbor.populatePoint(_surface);
+//            if (!neighbor.valid())
+//                neighbor.setHeight(_surface.at(neighbor.x).at(neighbor.y).getHeight());
         }
 
-        // find the neighbor of current with the lowest score
+        // find the neighbor of current with the lowest score, and add it to openSet
         for (auto &neighbor: neighbors) { // for each neighbor of current node
             unsigned short tentative_gScore = currentNode.getgScore() + (unsigned short)round(straightLineDist(currentNode, neighbor) );
             if (tentative_gScore < neighbor.getgScore()) {
@@ -245,7 +248,6 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 }
                 if (!inSet)
                     openSet.push_back(neighbor);
-//                openSet.push_back(neighbor); //debug
             } // end found smaller
 
         } // end for neighbors
@@ -259,7 +261,7 @@ bool World::valid() const {
     return _valid;
 }
 
-/// send all points of surface to ostream.
+/// send all points of surface to ostream.\n
 /// default display: each item evenly spaced and each row on new line
 void World::exportSurface(ostream& output) const {
     for (const auto& row : this->getSurface()) {
@@ -270,7 +272,7 @@ void World::exportSurface(ostream& output) const {
 }
 
 void World::displaySurface(char dispType = 'd') const {
-    cout << "not implemented. displaying surface to cout." << endl;
+    cout << "not implemented. displaying surface to default text output." << endl;
     this->exportSurface(cout);
 }
 

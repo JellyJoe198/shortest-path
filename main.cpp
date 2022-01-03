@@ -7,22 +7,29 @@
  */
 
 #include <iostream>
+#include <sstream>
+
 using namespace std;
 
 #include "class/World.h"
 #include "class/coord.hpp"
 
-
 int main() {
 
+    //
+//    istream& input = cin;
+    std::string stringvalues = "1 5 1 1";
+    std::istringstream iss (stringvalues);
+    istream& input = iss;
+
     // create surface based on our file
-    World mountain("testSurface1w.txt");
+    World mountain("testSurface1a.txt");
 
     // validate surface
     if (!mountain.valid()) {
         cout << "Surface is invalid and may cause unexpected behavior. Continue anyway?";
         string answer;
-        cin >> answer;
+        input >> answer;
         // check if answer is a yes
         bool yes = false;
         if (!answer.empty()) {
@@ -41,9 +48,11 @@ int main() {
     // request start and end points
     coord<unsigned short> start, end;
     cout << "start point (x y) ";
-    cin >> start; // take 2 integers from stream
+    input >> start; // take 2 integers from stream
     cout << "end point (x y) ";
-    cin >> end;
+    input >> end;
+
+    cout << endl << endl;
 
     // calculate shortest path
     vector<coord<unsigned short>> path = mountain.getBestPath(start, end);

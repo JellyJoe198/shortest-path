@@ -15,35 +15,70 @@
 
 #include "point.hpp"
 
+#ifndef surface_t
+#define surface_t vector<vector<point<unsigned short>>>
+#endif//surface_t
+
+//template <typename Type>
+//struct location {
+//    Type x, y;
+//};
+
 // template: specify type of position and, optionally, point height and score data types
 template <typename pos_t = unsigned, typename p_height_t = unsigned short, typename p_score_t = unsigned short>
-struct coord {
+class coord {
+private:
+    // todo make point a pointer to increase speed & streamline value population from grids.
+    mutable point<p_height_t, p_score_t> * _point = nullptr;
+
+    coord<pos_t> * cameFrom = nullptr; // pointer to previous node in shortest path (used in A* alg)
+
+// //    bool _validPoint;
+
 public:
+
     pos_t x, y; // location of point, such as in a grid
-    mutable point<p_height_t, p_score_t> point; // todo make point a pointer to increase speed & streamline value population from grids.
 
     // constructors
-    coord() { this->x = 0; this->y = 0;}
-    coord(pos_t x, pos_t y) { this->x = x; this->y = y;}
-    coord(pos_t x, pos_t y, p_score_t score) { this->x = x; this->y = y; this->point.setgScore(score); this->point.setfScore(score);}
+    coord() {
+        this->x = 0; this->y = 0;
+    }
+    coord(pos_t x, pos_t y) {
+        this->x = x; this->y = y;
+    }
+    coord(pos_t x, pos_t y, p_score_t score) {
+        this->x = x; this->y = y; setgScore(score); setfScore(score);
+    }
+
+    // populate: find the point corresponding to this->location.
+    void populatePoint(surface_t& source, bool override = false) const {
+        if(override|| !this->valid()) { // if point is invalid or overridden
+            // retrieve data from surface
+            this->_point = & source.at(this->x).at(this->y);
+//            this->setHeight(source.at(this->x).at(this->y).getHeight() );
+        }
+    }
+
+//    bool validPoint();
 
     /* point shortcut getters */
-    p_score_t getHeight() const { return point.getHeight(); }
-    void setHeight(p_height_t height) {point.setHeight(height); }
+    p_score_t getHeight() const { return _point->getHeight(); }
+    void setHeight(p_height_t height) const {_point->setHeight(height); }
 
-    p_score_t getgScore() const { return point.getgScore(); }
-    void setgScore(p_score_t score) {point.setgScore(score); }
+    p_score_t getgScore() const { return _point->getgScore(); }
+    void setgScore(p_score_t score) {_point->setgScore(score); }
 
-    p_score_t getfScore() const { return point.getfScore(); }
-    void setfScore(p_score_t score) {point.setfScore(score); }
+    p_score_t getfScore() const { return _point->getfScore(); }
+    void setfScore(p_score_t score) {_point->setfScore(score); }
 
 
     /* validity checks */
     bool valid() const {
-        point.valid();
+//        if(_point != nullptr)
+            return _point && _point->valid();
     }
     bool bothValid(const coord<pos_t>& rhs) const {
-        return valid() && rhs.valid(); // true if both valid
+        return this->valid() && rhs.valid(); // true if both valid
     }
 
     /** overloaded operators **/
@@ -57,9 +92,8 @@ public:
 
     // equality
     bool operator ==(const coord<pos_t>& rhs) const {
-        return bothValid(rhs)
-           && this->x == rhs.x
-           && this->y == rhs.y; // true if they're both valid and the same point
+        return this->x == rhs.x
+            && this->y == rhs.y; // true if they're both the same point
     }
 //    bool operator !=(const coord<pos_t>& rhs) const {
 //        return !(this == rhs);
