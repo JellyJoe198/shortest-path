@@ -16,13 +16,12 @@ using namespace std;
 
 int main() {
 
-    //
-//    istream& input = cin;
 //    std::string stringvalues = "1 3 1 1";
-// possible error: _cameFrom is the same as this in coord 0x66f810 (1, 1) (2, 1) (2, 1)
-    std::string stringvalues = "4 2 0 1";
-    std::istringstream iss (stringvalues);
-    istream& input = iss;
+//    std::string stringvalues = "4 2 0 1";
+
+    istream& input = cin;
+//    std::istringstream iss (stringvalues);
+//    istream& input = iss;
 
     // create surface based on our file
     World mountain("testSurface1a.txt");

@@ -166,19 +166,20 @@ long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to en
     return heuristic(start, start, end);
 }
 
-//double sumScore(vector<coord<unsigned short>>);
+typedef vector<coord<unsigned short>> vcoords;
 
 // best path calculation
 /// @desc find the best path along _surface using A* algorithm
 /// @return a vector of coordinates corresponding to nodes of the shortest path
 /// @params start and end are zero-indexed coordinates (x y) corresponding to position on _surface.
-vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
+vcoords World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
     // variables used: start, end, grid-surface
 
-//    vector<coord<unsigned short>> nodeHistory{start};
+//    vcoords nodeHistory{start};
+    vcoords currentHistory{1, {(unsigned short)(~0),(unsigned short)(~0)} };
 
     // The set of discovered nodes that may need to be (re-)expanded.
-    vector<coord<unsigned short>> openSet = {start}; // initially only start is known.
+    vcoords openSet = {start}; // initially only start is known.
 
     start.setgScore(0); // gScore is the cost of the shortest known path from start to this node.
     start.setfScore(heuristic(start,end)); // fScore is the cost of the shortest possible path through this node, using straight line calculations.
@@ -186,7 +187,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
     while (!openSet.empty()) { // while openSet is not empty
 
         // find node in openSet having the lowest fScore
-        int cPos = 0; // position of lowest node
+        int cPos = 0; // position of lowest node in openSet
         coord<unsigned short> currentNode = openSet.at(0); // will contain the node in openSet of the lowest fScore
         for (int i = 0; i < openSet.size(); ++i) {
             auto node = openSet[i];
@@ -195,19 +196,21 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 cPos = i;
             }
         }
+        currentHistory.push_back(currentNode);
+        index_t currentPermIndex = currentHistory.size() -1;
 
         // stopping condition: path reaches end
         if (currentNode == end) { // if this node is the end node, return the path to this node
             // reconstruct path from end to start.
-            vector<coord<unsigned short>> shortestPath {currentNode};
-            currentNode.reconstructPath(shortestPath);
+            vcoords shortestPath {currentNode};
+            currentNode.reconstructPath(shortestPath, currentHistory);
             return shortestPath;
         }
 
         // get neighboring nodes of current node
-        vector<coord<unsigned short>> neighbors;
+        vcoords neighbors;
         const coord<short> offsets[] = {
-                {1,0}, {0,1}, {-1,0}, {0,-1}};
+                {1,0}, {0,1}, {-1,0}, {0,-1} };
         for (const auto& offset : offsets) {
             const coord<unsigned short> pos (currentNode.x + offset.x, currentNode.y + offset.y, INF);
             if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
@@ -231,7 +234,8 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
 //                nodeHistory.push_back(neighbor);
-                neighbor.cameFrom(currentNode);
+//                neighbor.setCameFrom(currentNode);
+                neighbor.setCameFrom(currentPermIndex);
                 neighbor.setgScore(tentative_gScore);
                 neighbor.setfScore(16*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
 
@@ -251,7 +255,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
     } // end while openSet not empty
 
-    return {};//vector<coord<unsigned short>>(0); // failure return is empty vector
+    return {};//vcoords(0); // failure return is empty vector
 }
 
 bool World::valid() const {
