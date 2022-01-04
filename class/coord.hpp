@@ -31,9 +31,7 @@ private:
     // todo make point a pointer to increase speed & streamline value population from grids.
     mutable point<p_height_t, p_score_t> * _point = nullptr;
 
-    coord<pos_t> * cameFrom = nullptr; // pointer to previous node in shortest path (used in A* alg)
-
-// //    bool _validPoint;
+    coord<pos_t> * _cameFrom = nullptr; // pointer to previous node in shortest path (used in A* alg)
 
 public:
 
@@ -71,14 +69,38 @@ public:
     p_score_t getfScore() const { return _point->getfScore(); }
     void setfScore(p_score_t score) {_point->setfScore(score); }
 
+    // set cameFrom for use in reconstructPath
+    void cameFrom(coord<pos_t> crd) {
+        if (&crd != this)
+            _cameFrom = & crd; // store pointer to cameFrom node
+//        if (_cameFrom) {
+//            cout << "warning: cameFrom called on node already filled." << endl;
+//        }
+    }
+
+    /// reconstruct path: use _cameFrom recursively to find all consecutive nodes in path
+    void reconstructPath(vector<coord<pos_t>>& path) const {
+        // stopping condition: start node, cameFrom doesn't exist
+        if (!_cameFrom) {
+            return;
+        }
+
+        // recursion: add to vector and repeat.
+        path.push_back(*_cameFrom); // add coord object to the vector
+//        if (this == _cameFrom) {
+//            cout << "possible error: `_cameFrom` is the same as `this` in coord " << this
+//                 << " in path position " << path.size() << endl;
+//        }
+//        else
+        _cameFrom->reconstructPath(path); // repeat
+    }
 
     /* validity checks */
     bool valid() const {
-//        if(_point != nullptr)
-            return _point && _point->valid();
+        return _point && _point->valid(); // true if point exists and is valid
     }
     bool bothValid(const coord<pos_t>& rhs) const {
-        return this->valid() && rhs.valid(); // true if both valid
+        return this->valid() && rhs.valid(); // true if both coords are valid
     }
 
     /** overloaded operators **/
@@ -114,10 +136,6 @@ public:
                  valid() * (pos_t)(this->y + rhs.y) };
     }
 
-//    /* type conversions */
-//    explicit operator unsigned short() const {
-//        return x, y;
-//    }
 };
 
 

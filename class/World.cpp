@@ -159,7 +159,7 @@ double World::straightLineDist(coord<T> &c1, coord<T> &c2) {
 // how short a path from start to finish can be if it goes through n.
 template <typename T>
 long World::heuristic(coord<T>& start, coord<T>& mid, coord<T>& end) {
-    return 10*( straightLineDist(start, mid) + straightLineDist(mid, end));
+    return 16*( straightLineDist(start, mid) + straightLineDist(mid, end));
 }
 template <typename T>
 long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to end = start to start to end
@@ -175,7 +175,7 @@ long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to en
 vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
     // variables used: start, end, grid-surface
 
-    vector<coord<unsigned short>> nodeHistory{start};
+//    vector<coord<unsigned short>> nodeHistory{start};
 
     // The set of discovered nodes that may need to be (re-)expanded.
     vector<coord<unsigned short>> openSet = {start}; // initially only start is known.
@@ -198,9 +198,10 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // stopping condition: path reaches end
         if (currentNode == end) { // if this node is the end node, return the path to this node
-            nodeHistory.push_back(end);
-            return nodeHistory;
-//            return reconstruct_path(cameFrom, current);
+            // reconstruct path from end to start.
+            vector<coord<unsigned short>> shortestPath {currentNode};
+            currentNode.reconstructPath(shortestPath);
+            return shortestPath;
         }
 
         // get neighboring nodes of current node
@@ -219,13 +220,8 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
 
         // populate height values from _surface for relevant points
         currentNode.populatePoint(_surface);
-//        if(!currentNode.valid()) {
-//            currentNode.setHeight(_surface.at(currentNode.x).at(currentNode.y).getHeight()); // retrieve height from surface
-//        }
         for (auto &neighbor: neighbors) { // populate all neighbors
             neighbor.populatePoint(_surface);
-//            if (!neighbor.valid())
-//                neighbor.setHeight(_surface.at(neighbor.x).at(neighbor.y).getHeight());
         }
 
         // find the neighbor of current with the lowest score, and add it to openSet
@@ -234,9 +230,10 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
-                nodeHistory.push_back(neighbor);
+//                nodeHistory.push_back(neighbor);
+                neighbor.cameFrom(currentNode);
                 neighbor.setgScore(tentative_gScore);
-                neighbor.setfScore(tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
+                neighbor.setfScore(16*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
