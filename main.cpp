@@ -7,32 +7,53 @@
  */
 
 #include <iostream>
-#include <iomanip>
+#include <sstream>
 
 using namespace std;
 
 #include "class/World.h"
 #include "class/coord.hpp"
 
-
 int main() {
 
-    // create surface based on our file
-    World mountain("testSurface1.txt");
+//    std::string stringvalues = "1 3 1 1";
+//    std::string stringvalues = "4 2 0 1";
 
-    // debug: display surface 2D vector
-    for (const auto& row : mountain.getSurface()) {
-        for (const auto& point: row)
-            cout << setw(5) << point.getHeight() << ' ';
-        cout << endl;
+    istream& input = cin;
+//    std::istringstream iss (stringvalues);
+//    istream& input = iss;
+
+    // create surface based on our file
+    World mountain("testSurface1a.txt");
+
+    // validate surface
+    if (!mountain.valid()) {
+        cout << "Surface is invalid and may cause unexpected behavior. Continue anyway?";
+        string answer;
+        input >> answer;
+        // check if answer is a yes
+        bool yes = false;
+        if (!answer.empty()) {
+            const char a = answer[0];
+            if (a == 'y' || a == 'Y' || (a >= '1' && a <= '9') ) // y, Y, [any digit not zero]
+                yes = true;
+        }
+
+        if (!yes) return 0; // exit program unless user approved
     }
+
+    // send surface to standard output
+    cout << endl;
+    mountain.exportSurface(cout);
 
     // request start and end points
     coord<unsigned short> start, end;
     cout << "start point (x y) ";
-    cin >> start; // take 2 integers from stream
+    input >> start; // take 2 integers from stream
     cout << "end point (x y) ";
-    cin >> end;
+    input >> end;
+
+    cout << endl << endl;
 
     // calculate shortest path
     vector<coord<unsigned short>> path = mountain.getBestPath(start, end);

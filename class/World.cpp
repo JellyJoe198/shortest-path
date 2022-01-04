@@ -7,9 +7,10 @@
 #include "World.h"
 
 #include <fstream>  // fin
-#include <iostream> // cout
+#include <iomanip>
 #include <sstream>   // used in extraction of spaced file streams, hopefully not needed for hgt files
 #include <cmath>
+//#include <iostream> // cout
 //#include <string>
 //#include <vector>
 using namespace std;
@@ -20,7 +21,7 @@ const point<unsigned short> DEFAULT_POINT(0, INF);
 
 /// @desc constructor of World data from file
 /// @param fileName the name of the file to open (including extension)
-World::World(string fileName) {
+World::World(const string& fileName) {
 
     /* open file */
     ifstream fin(fileName); // dev_outputSurface.txt is a test surface simpler than hgt files
@@ -30,17 +31,31 @@ World::World(string fileName) {
         return;
     }
 
-    /* read file as our surface */
-    readSurface('s', fin);
+    // read file as surface
+    auto err = readSurface('s', fin);
 
-//    generateMap(2);
+    // handle errors: use bitwise logic to check if each possible error occurred
+        // this is inefficient I just wanted to see if I could
+    if (err & 0x1000)
+        cout << "WARNING (important): lines in surface file are of inconsistent length!" << endl;
+    if (err & 0x0100)
+        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
+
+    _valid = !(err&0x1000); // surface is only valid if there are no important errors
 }
 
-bool World::readSurface(char readType, ifstream &fin) {
-//    vector<vector< point<unsigned short> >> _surface; // temporary grid to store surface
+/// @brief reads surface from given file stream
+/// @param readType not implemented @param fin valid file stream from which to read surface
+/// @returns error codes:
+///     \n 0x1000: IMPORTANT linesInconsistentLength
+///     \n 0x0100: warn emptyLines
+int World::readSurface(char readType, ifstream &fin) {
 
     /* read data */
-    bool linesInconsistentLength{0}, emptyLines{0}; // data verification/warning trackers
+    // data verification/warning trackers
+    bool linesInconsistentLength    {false},
+         emptyLines                 {false};
+
     while (!fin.eof()) {
         // get each line from file
         string line;
@@ -48,11 +63,17 @@ bool World::readSurface(char readType, ifstream &fin) {
             // verify that line has contents
             if (line.empty())
                 continue;
+
             _surface.resize(_surface.size() + 1); // make space in grid for another row
         }
-        else {
+        else { // line is empty
             emptyLines = true;
-            continue; // if line is empty, skip over it
+            continue; // skip over this line
+        }
+
+        if (isspace(line[0])) { // line only contains whitespace
+            emptyLines = true;
+            continue; // skip over this line
         }
 
         // add line to vector
@@ -72,16 +93,19 @@ bool World::readSurface(char readType, ifstream &fin) {
 
     } // end while
 
-    // handling of warning cases
-    if (linesInconsistentLength)
-        cout << "Warning (important!): lines in surface file are of inconsistent length!" << endl;
-    if (emptyLines)
-        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
+//    // handling of warning cases
+//    if (linesInconsistentLength)    // 0x1000
+//        cout << "Warning (important!): lines in surface file are of inconsistent length!" << endl;
+//    if (emptyLines)                 // 0x0100
+//        cout << "Warning (weak): surface file contains empty lines that were ignored." << endl;
 
-    return true;
+    return (0x0000 // each bit corresponds to a different error.
+       +0x1000 * linesInconsistentLength
+       +0x0100 * emptyLines
+    );
 }
 
-// generate empty map
+/// @brief generate empty map
 /// @param rowSize size of row. @param colSize defaults to rowSize if not specified.
 void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
     if(!colSize)
@@ -93,7 +117,7 @@ void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
 
 // get raw surface
 /// @returns constant reference to surface (to avoid copying large data)
-const vector<vector<point<unsigned short>>> & World::getSurface() {
+const vector<vector<point<unsigned short>>> & World::getSurface() const {
     return _surface;
 }
 
@@ -103,19 +127,19 @@ const vector<vector<point<unsigned short>>> & World::getSurface() {
 double heightCoeff = 3; // exaggerate height changes to encourage flatter paths
 
 // the shortest possible path between 2 points is a straight line.
-template <typename Type>
-double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) const {
+template <typename T>
+double World::straightLineDist(coord<T> &c1, coord<T> &c2) {
     if (c1 == c2) return 0;
-
     // verify and autofill relevant heights
-    for (const auto& coord : {c1, c2}) {
-        if (!coord.valid()) {
-            coord.point.setHeight(
-                    _surface.at(coord.x).at(coord.y).getHeight() ); // retrieve this point's height from _surface
-        }
+    for (auto& crd : {c1, c2}) {
+        crd.populatePoint(_surface);
+//        if (!crd.valid()) {
+//            crd.setHeight(
+//                    _surface.at(crd.x).at(crd.y).getHeight() ); // retrieve this point's height from _surface
+//        }
 
-        if (!coord.valid()) {
-            cout << "Warning: could not find height of coordinate " << coord.x << ' ' << coord.y << endl;
+        if (!crd.valid()) {
+            cout << "Warning: could not find height of coordinate " << crd.x << ' ' << crd.y << endl;
 
             // invalid height means distance to this node cannot be properly calculated.
             // Infinity means this node will be avoided as long as there are other valid nodes around.
@@ -133,28 +157,29 @@ double World::straightLineDist(const coord<Type>& c1, const coord<Type>& c2) con
 }
 
 // how short a path from start to finish can be if it goes through n.
-template <typename Type>
-long World::heuristic(const coord<Type>& start, const coord<Type>& mid, const coord<Type>& end) {
-    return 10*( straightLineDist(start, mid) + straightLineDist(mid, end));
+template <typename T>
+long World::heuristic(coord<T>& start, coord<T>& mid, coord<T>& end) {
+    return 16*( straightLineDist(start, mid) + straightLineDist(mid, end));
 }
-template <typename Type>
-long World::heuristic(const coord<Type>& start, const coord<Type>& end) { // shortcut: start to end = start to start to end
+template <typename T>
+long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to end = start to start to end
     return heuristic(start, start, end);
 }
 
-//double sumScore(vector<coord<unsigned short>>);
+typedef vector<coord<unsigned short>> vcoords;
 
 // best path calculation
-/// @desc use the A* algorithm to find the best path along _surface
+/// @desc find the best path along _surface using A* algorithm
 /// @return a vector of coordinates corresponding to nodes of the shortest path
 /// @params start and end are zero-indexed coordinates (x y) corresponding to position on _surface.
-vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
+vcoords World::getBestPath(coord<unsigned short> start, coord<unsigned short> end) {
     // variables used: start, end, grid-surface
 
-    vector<coord<unsigned short>> shortPath{start};
+//    vcoords nodeHistory{start};
+    vcoords currentHistory{1, {(unsigned short)(~0),(unsigned short)(~0)} };
 
     // The set of discovered nodes that may need to be (re-)expanded.
-    vector<coord<unsigned short>> openSet = {start}; // initially only start is known.
+    vcoords openSet = {start}; // initially only start is known.
 
     start.setgScore(0); // gScore is the cost of the shortest known path from start to this node.
     start.setfScore(heuristic(start,end)); // fScore is the cost of the shortest possible path through this node, using straight line calculations.
@@ -162,7 +187,7 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
     while (!openSet.empty()) { // while openSet is not empty
 
         // find node in openSet having the lowest fScore
-        int cPos = 0; // position of lowest node
+        int cPos = 0; // position of lowest node in openSet
         coord<unsigned short> currentNode = openSet.at(0); // will contain the node in openSet of the lowest fScore
         for (int i = 0; i < openSet.size(); ++i) {
             auto node = openSet[i];
@@ -171,18 +196,21 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 cPos = i;
             }
         }
+        currentHistory.push_back(currentNode);
+        index_t currentPermIndex = currentHistory.size() -1;
 
         // stopping condition: path reaches end
         if (currentNode == end) { // if this node is the end node, return the path to this node
-            shortPath.push_back(end);
-            return shortPath;
-//            return reconstruct_path(cameFrom, current);
+            // reconstruct path from end to start.
+            vcoords shortestPath {currentNode};
+            currentNode.reconstructPath(shortestPath, currentHistory);
+            return shortestPath;
         }
 
-        // neighboring nodes of current node
-        vector<coord<unsigned short>> neighbors;
+        // get neighboring nodes of current node
+        vcoords neighbors;
         const coord<short> offsets[] = {
-                {1,0}, {0,1}, {-1,0}, {0,-1}};
+                {1,0}, {0,1}, {-1,0}, {0,-1} };
         for (const auto& offset : offsets) {
             const coord<unsigned short> pos (currentNode.x + offset.x, currentNode.y + offset.y, INF);
             if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
@@ -192,28 +220,24 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
         }
 
         openSet.erase(openSet.begin() + cPos); //openSet.Remove(current);
-//        //debug display openSet
-//        for (const auto &item : openSet) {
-//            cout << item.x << ' ' << item.y << endl;
-//        }
 
         // populate height values from _surface for relevant points
-        if(!currentNode.valid())
-            currentNode.setHeight(_surface.at(currentNode.x).at(currentNode.y).getHeight()); // retrieve height from surface
+        currentNode.populatePoint(_surface);
         for (auto &neighbor: neighbors) { // populate all neighbors
-            if (!neighbor.valid())
-                neighbor.setHeight(_surface.at(neighbor.x).at(neighbor.y).getHeight());
+            neighbor.populatePoint(_surface);
         }
 
-        // find the neighbor of current with the lowest score
+        // find the neighbor of current with the lowest score, and add it to openSet
         for (auto &neighbor: neighbors) { // for each neighbor of current node
             unsigned short tentative_gScore = currentNode.getgScore() + (unsigned short)round(straightLineDist(currentNode, neighbor) );
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
-                shortPath.push_back(neighbor);
+//                nodeHistory.push_back(neighbor);
+//                neighbor.setCameFrom(currentNode);
+                neighbor.setCameFrom(currentPermIndex);
                 neighbor.setgScore(tentative_gScore);
-                neighbor.setfScore(tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
+                neighbor.setfScore(16*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
@@ -225,12 +249,31 @@ vector<coord<unsigned short>> World::getBestPath(coord<unsigned short> start, co
                 }
                 if (!inSet)
                     openSet.push_back(neighbor);
-//                openSet.push_back(neighbor); //debug
             } // end found smaller
 
         } // end for neighbors
 
     } // end while openSet not empty
 
-    return {};//vector<coord<unsigned short>>(0); // failure return is empty vector
+    return {};//vcoords(0); // failure return is empty vector
 }
+
+bool World::valid() const {
+    return _valid;
+}
+
+/// send all points of surface to ostream.\n
+/// default display: each item evenly spaced and each row on new line
+void World::exportSurface(ostream& output) const {
+    for (const auto& row : this->getSurface()) {
+        for (const auto& point: row)
+            output << setw(5) << point.getHeight() << ' ';
+        output << endl;
+    }
+}
+
+void World::displaySurface(char dispType = 'd') const {
+    cout << "not implemented. displaying surface to default text output." << endl;
+    this->exportSurface(cout);
+}
+
