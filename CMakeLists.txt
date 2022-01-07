@@ -9,13 +9,12 @@ include_directories("C:/mingw64/mingw64/include")
 include_directories("C:/mingw64/x86_64-w64-mingw32/include")
 
 add_executable(Final_Project main.cpp
-        #function/extraMath.cpp function/extraMath.h
-        #function/hgtRead.cpp function/hgtRead.h
-        class/point.hpp #class/Map.h
-        class/World.h class/World.cpp
-        class/coord.hpp #class/coord.cpp
+        class/point.hpp
+        #class/World.h
+        class/World.cpp
+        class/coord.hpp
         #[[function/hue.cpp]]
-        function/Display.cpp function/Display.h)
+        )
 
 target_link_directories(Final_Project PUBLIC "C:/mingw/lib")
 target_link_directories(Final_Project PUBLIC "C:/mingw64/lib")

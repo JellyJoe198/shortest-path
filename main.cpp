@@ -1,7 +1,7 @@
 /* CSCI261 Final Project: Shortest path
  * main file
  *
- * Author: Joseph Brownlee (jmbrownlee)
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
  * see acknowledgements.md for resources used (Math Professors, other students, online forums, etc)
  */
@@ -16,15 +16,32 @@ using namespace std;
 
 int main() {
 
-//    std::string stringvalues = "1 3 1 1";
-//    std::string stringvalues = "4 2 0 1";
+    // preset inputs
+//    std::string stringvalues = "6  1 3 1 1";
+//    std::string stringvalues = "6  9 2 0 1";
+    std::string stringvalues = "32767 0 0 7 9"; // maze
 
-    istream& input = cin;
-//    std::istringstream iss (stringvalues);
-//    istream& input = iss;
+    std::istringstream iss (stringvalues);
+    istream& input = iss;
+
+//    istream& input = cin;
+
+    // request file name
+//    cout << "fileName: ";
+    string fileName = "mazeTest.txt";
+//    cin >> fileName;
 
     // create surface based on our file
-    World mountain("testSurface1a.txt");
+    World mountain(fileName);
+//    World mountain("testSurface1a.txt");
+
+    // request height coefficient
+    int coeff;
+    cout << "heightCoefficient: ";
+    input >> coeff;
+
+    if ( mountain.setHeightCoeff(coeff) )
+        cout << "error: height coefficient failed to set";
 
     // validate surface
     if (!mountain.valid()) {
@@ -42,7 +59,7 @@ int main() {
         if (!yes) return 0; // exit program unless user approved
     }
 
-    // send surface to standard output
+    // display surface to text out
     cout << endl;
     mountain.exportSurface(cout);
 
@@ -55,10 +72,11 @@ int main() {
 
     cout << endl << endl;
 
+
     // calculate shortest path
     vector<coord<unsigned short>> path = mountain.getBestPath(start, end);
 
-    // debug: display shortest path
+    // display shortest path to text out
     if (path.empty()) {
         cout << "could not find a valid path." << endl;
         return 0;
@@ -66,6 +84,10 @@ int main() {
     for(auto node : path) {
         cout << "(" << node.x << ", " << node.y << ")" << endl;
     }
+
+    /**  **/
+
+
 
     return 0;
 }
