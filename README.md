@@ -11,7 +11,7 @@ I want to calculate the best path to take when hiking up a mountain. The shortes
 0) ensure your surface file is in the same directory as the program, and that your computer is capable of running the program, including compatability with SFML. Build c++ code with Cmake if necessarry.
 1) run program and follow input prompts
     - input the name of your surface file  
-    - input your height intolerance coefficient: 1 means you can travel vertically just as easily as horizontal; higher numbers generally result in a longer, but less steep path.  
+    - input your height intolerance coefficient: 1 means you can travel vertically just as easily as horizontal; higher numbers generally result in a longer, but less steep path. 6 is the maximum reccomended coefficient, but it can be any floating point number.  
     - input start and end coordinates: you must input 2 numbers separated by whitespace for each coordinate. (4 numbers in total)  
     - see in the console your surface and the path
     - see in an SFML window:
