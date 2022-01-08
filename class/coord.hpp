@@ -1,13 +1,12 @@
 /* CSCI261 Final Project: Shortest path
- * coord header and implementation (in place) file
+ * coord header and implementation (in place)
  *
- * Author: Joseph Brownlee
+ * Author: Joseph Brownlee (jmbrownlee@mines.edu)
  *
  * Coordinate is a wrapper around a point to add location data.
  *  It is important to optimize for memory because there are at least 1442401 points in a full 3º input file.
  *  Not all points need to be aware of their location in the grid.
  *
- * note: defining functions in place here is required to allow templates to work properly.
  */
 
 #ifndef MAIN_CPP_COORD_HPP
@@ -68,16 +67,6 @@ public:
     p_score_t getfScore() const { return _point->getfScore(); }
     void setfScore(p_score_t score) {_point->setfScore(score); }
 
-//    // get the stored coordinate of previous point
-//    coord<pos_t> getCameFrom(const surface_t& grid) const {
-//        cout << "function disabled ";
-////        point<p_height_t> * prevPoint = _point->getPrevious();
-////
-////        // get location based on memory by abusing vectors https://stackoverflow.com/q/8159082
-////        auto * row = prevPoint - &grid[0];
-////        auto * index = prevPoint - &row;
-////        return index;
-//    }
 
     // get came from node from index in history
     coord<pos_t> getCameFrom(const vector<coord<pos_t>> & nodes) const {
@@ -85,7 +74,11 @@ public:
     }
 
     void setCameFrom(const index_t& index) {
-        _prevIndex = index;
+        if (_prevIndex == index) {
+            cout << "WARNING: setCameFrom called on self." << endl;
+        } else {
+            _prevIndex = index;
+        }
     }
 
     // set cameFrom for use in reconstructPath
@@ -101,7 +94,7 @@ public:
 
     /// reconstruct path: use _cameFrom recursively to find all consecutive nodes, and put them into path.
     void reconstructPath(vector<coord<pos_t>>& path, const vector<coord<pos_t>>& history) const {
-        // stopping condition: start node, cameFrom doesn't exist
+        // stopping condition: _prevIndex is zero in start node.
         if (!_prevIndex) {
             return;
         }
@@ -143,14 +136,14 @@ public:
         return !(this == rhs);
     }
 
-    /// @brief memberwise multiply by a constant
+    /// @brief memberwise multiply a coord by a constant
     /// @returns 0,0 if invalid, otherwise returns coords, each multiplied.
     coord<pos_t> operator *(const unsigned mult) const {
         return { valid() * this->x * mult,
                  valid() * this->y * mult};
     }
 
-    /// @brief memberwise addition of two coordinates
+    /// @brief memberwise addition of two coords
     /// @returns 0,0 if invalid, otherwise returns coords added
     template <typename Type>
     coord<pos_t> operator +(const coord<Type>& rhs) const {

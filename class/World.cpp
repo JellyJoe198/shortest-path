@@ -32,7 +32,7 @@ World::World(const string& fileName) {
     }
 
     // read file as surface
-    auto err = readSurface('s', fin);
+    auto err = readSurface(fin, 's');
 
     // handle errors: use bitwise logic to check if each possible error occurred
         // this is inefficient I just wanted to see if I could
@@ -49,7 +49,7 @@ World::World(const string& fileName) {
 /// @returns error codes:
 ///     \n 0x1000: IMPORTANT linesInconsistentLength
 ///     \n 0x0100: warn emptyLines
-int World::readSurface(char readType, ifstream &fin) {
+int World::readSurface(ifstream &fin, char readType = 0) {
 
     /* read data */
     // data verification/warning trackers
@@ -105,26 +105,26 @@ int World::readSurface(char readType, ifstream &fin) {
     );
 }
 
-/// @brief generate empty map
-/// @param rowSize size of row. @param colSize defaults to rowSize if not specified.
-void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
-    if(!colSize)
-        colSize = rowSize; // default to square if columns not given
-
-    // generate the empty surface
-    _surface.resize(rowSize, vector<point<unsigned short>>(colSize, DEFAULT_POINT )); // create grid of proper size, defaulted to 0 height and infinite cost
-}
+///// @brief generate empty map
+///// @param rowSize size of row. @param colSize defaults to rowSize if not specified.
+//void World::generateMap(unsigned int rowSize, unsigned int colSize = 0) {
+//    if(!colSize)
+//        colSize = rowSize; // default to square if columns not given
+//
+//    // generate the empty surface
+//    _surface.resize(rowSize, vector<point<unsigned short>>(colSize, DEFAULT_POINT )); // create grid of proper size, defaulted to 0 height and infinite cost
+//}
 
 // get raw surface
 /// @returns constant reference to surface (to avoid copying large data)
-const vector<vector<point<unsigned short>>> & World::getSurface() const {
+const surface_t & World::getSurface() const {
     return _surface;
 }
 
 
 /** functions required for best path calculation **/
 
-double heightCoeff = 3; // exaggerate height changes to encourage flatter paths
+//double heightCoeff = 3; // exaggerate height changes to encourage flatter paths
 
 // the shortest possible path between 2 points is a straight line.
 template <typename T>
@@ -152,14 +152,16 @@ double World::straightLineDist(coord<T> &c1, coord<T> &c2) {
             // using absolute value and long cast to ensure values don't wraparound when subtracting
             pow(abs((long)c1.x - (long)c2.x), 2)
             + pow(abs((long)c1.y - (long)c2.y), 2)
-            + pow(abs((long)heightCoeff * c1.getHeight() - (long)heightCoeff * c2.getHeight()), 2)
+            + pow(abs((long)_heightCoeff * c1.getHeight() - (long)_heightCoeff * c2.getHeight()), 2)
         );
 }
+
+const short SCORE_SCALE = 16;
 
 // how short a path from start to finish can be if it goes through n.
 template <typename T>
 long World::heuristic(coord<T>& start, coord<T>& mid, coord<T>& end) {
-    return 16*( straightLineDist(start, mid) + straightLineDist(mid, end));
+    return SCORE_SCALE*( straightLineDist(start, mid) + straightLineDist(mid, end));
 }
 template <typename T>
 long World::heuristic(coord<T>& start, coord<T>& end) { // shortcut: start to end = start to start to end
@@ -237,7 +239,7 @@ vcoords World::getBestPath(coord<unsigned short> start, coord<unsigned short> en
 //                neighbor.setCameFrom(currentNode);
                 neighbor.setCameFrom(currentPermIndex);
                 neighbor.setgScore(tentative_gScore);
-                neighbor.setfScore(16*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
+                neighbor.setfScore(SCORE_SCALE*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
@@ -277,3 +279,51 @@ void World::displaySurface(char dispType = 'd') const {
     this->exportSurface(cout);
 }
 
+/// set height coefficient.
+/// @return true if unsuccessful
+bool World::setHeightCoeff(double coeff) {
+    if (coeff >= 0) {
+        _heightCoeff = coeff;
+        return false;
+    }
+    return true;
+}
+
+sf::Vector2<size_t> World::getSize() const {
+    return {
+        _surface.size(), // row count
+        _surface.at(0).size() // column count
+    };
+}
+
+point<unsigned short> World::getPoint(int x, int y) const {
+    // preliminary range check
+    if (x >=0 && y >=0  &&  x < getSize().x && y < getSize().y)
+        return getSurface().at(x).at(y);
+    else
+        return {}; // default point (height zero) if invalid
+}
+
+/// get height range
+/// @returns x: min (smallest) \n y: max (highest)
+sf::Vector2<unsigned> World::getHeightRange() const {
+    unsigned min = getPoint(0,0).getHeight();
+    unsigned max = getPoint(0,0).getHeight(); // initialize both to first point
+
+    for (int i = 1; i < getSize().x; ++i) {
+        for (int j = 1; j < getSize().y; ++j) {
+            // compare each height to max and min.
+            auto height = getPoint(i,j).getHeight();
+            if (max < height)
+                max = height;
+            if (min > height)
+                min = height;
+        }
+    }
+
+    return {min, max};
+}
+
+double World::getHeightCoeff() {
+    return _heightCoeff;
+}

@@ -18,10 +18,6 @@ struct location {
     Type x, y;
 };
 
-//typedef location<unsigned short> loc;
-//const auto INF = (unsigned short)(~0);
-//const loc nulloc = {INF,INF};
-
 template <typename height_t, typename score_t = unsigned short>
 class point {
 private:
@@ -32,30 +28,14 @@ private:
 
 public:
 
-    /*point<height_t> & getPrevious() {
-        if (this) return _previous;
-        else return nullptr;
-    }
-    bool setPrevious(const point<height_t>& point) {
-        if (this) {_previous = &point; return true;}
-        else return false;
-    }//*/
-//    loc getPrevious() {
-//        if (this) return _pLoc;
-//        else return nulloc;
-//    }
-//    bool setPrevious(const loc& pt) {
-//
-//    }
-
     // basic getters and setters. must check if self exists before reading from self.
-    height_t getHeight() const { if(this) return _height; }
+    height_t getHeight() const { if(this) return _height; return false;}
     void setHeight(height_t height) {if(this) _height = height; }
 
-    score_t getfScore() const { if(this) return _fScore; }
+    score_t getfScore() const { if(this) return _fScore; return false;}
     void setfScore(score_t fScore) {if(this) _fScore = fScore; }
 
-    score_t getgScore() const { if(this) return _gScore; }
+    score_t getgScore() const { if(this) return _gScore; return false;}
     void setgScore(score_t gScore) {if(this) this->_gScore = gScore;}
 
     // construction

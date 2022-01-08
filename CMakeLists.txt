@@ -10,10 +10,9 @@ include_directories("C:/mingw64/x86_64-w64-mingw32/include")
 
 add_executable(Final_Project main.cpp
         class/point.hpp
-        #class/World.h
         class/World.cpp
         class/coord.hpp
-        #[[function/hue.cpp]]
+        funct/hue.cpp
         )
 
 target_link_directories(Final_Project PUBLIC "C:/mingw/lib")
