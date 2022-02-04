@@ -1,0 +1,5 @@
+Allowable formats:
+ - hgt format (not implemented)
+ - spaced string: 
+	+ newlines at the end of each row, including the last row.
+	+ Zeros (0x00000000) are not allowed (soft requirement, it attempts to fix zeros but can cause bugs).

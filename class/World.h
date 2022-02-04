@@ -32,7 +32,7 @@ public:
     vector<coord<unsigned short>> getBestPath(coord<unsigned short> start, coord<unsigned short> end);
 
     bool setHeightCoeff(double coeff);
-    double getHeightCoeff();
+    double getHeightCoeff() const;
 
     /* surface accessors */
     const vector<vector<point<unsigned short>>> & getSurface() const; // raw vector
@@ -46,7 +46,7 @@ public:
 private:
     vector<vector<point<unsigned short>>> _surface; // 2D map of points with height and score data
     bool _valid {false};
-    double _heightCoeff {3}; // bug: this doen't make a path if less than 1
+    double _heightCoeff {3};
 
     int readSurface(ifstream &fin, char readType);
 //    void generateMap(unsigned rowSize, unsigned colSize);

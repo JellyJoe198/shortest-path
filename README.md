@@ -10,17 +10,17 @@ I want to calculate the best path to take when hiking up a mountain. The shortes
 ## How to run the program
 0) ensure your surface file is in the same directory as the program, and that your computer is capable of running the program, including compatability with SFML. Build c++ code with Cmake if necessarry.
 1) run program and follow input prompts
-    - input the name of your surface file  
-    - input your height intolerance coefficient: 1 means you can travel vertically just as easily as horizontal; higher numbers generally result in a longer, but less steep path. 6 is the maximum reccomended coefficient, but it can be any floating point number.  
-    - input start and end coordinates: you must input 2 numbers separated by whitespace for each coordinate. (4 numbers in total)  
+    - input the location (name) of your surface file  
+    - input your height intolerance coefficient: 1 means you can travel vertically just as easily as horizontal; higher numbers generally result in a longer, but less steep path. numbers above 6 or below 1 may generate weird or incorrect paths, but there is not a hard coded limit. This can be any floating point number.  
+    - input start and end coordinates: you must input 2 numbers separated by whitespace for each coordinate. specify row then column for each coordinate. (4 numbers in total)  
     - see in the console your surface and the path
     - see in an SFML window:
-        - the surface, with a key on the righthand side of the window to show how hue relates to height.  
-        - on any key press: the path the program found between those two points will be shown. Pressing again will overlay it onto the surface, with the colors darkened to identify pixels that are part of path without obstructing height data.  
+        - The Surface, with a gradient on the righthand side of the window showing how hue relates to height.  
+        - On Press of Space Bar: the path the program found between those two points will be shown. Pressing again will overlay it onto the surface, with the colors darkened to identify pixels that are part of path without obstructing height data too much.  
 
 ## Additional features to add later
 - reading from huge hgt files: this would require an upgrade of the `readSurface()` function to not require spaces between each value, and likely an upgrade in the memory management in `World::_surface` to allow more data to be stored.
-- taking start and end coordinates from clicks in an SFML window instead of text coordinates: this should be relatively simple to implement, you just have to add an event for clicking and send the mouse position to the shortPath function, then display again.
+- taking start and end coordinates from clicks in an SFML window instead of text coordinates: this should be relatively simple to implement, you just have to add an event for clicking and send the mouse position to the shortPath function, then display again. This also requires the window to exist before the path is calculated.  
 
 # Test Cases
 There are a few verifications in place to warn the user when surface files are malformed.  
@@ -47,7 +47,7 @@ In this project I strengthened my knowledge of classes, and practiced debugging 
 Overall, this program was a good stress test of my programming skills, and it gave me a good opportunity to research different path finding algorithms, some of which may be relevant to modern robotics or in mapping electrical circuits.  
 
 ## Acknowledgements  
-During this project I had help from the following people:  
+During this project I had significant help from the following people:  
 
 - __Dr. Jeffrey Paone__ - programming concepts CSCI261, and a few questions on Piazza.    
 - __Student Glenn Moore__ - Got me out of the calculus rabbit hole: A*_algorithm discussion (abstract pseudocode only), memory efficiency discussion around storing nodes, and max precision calculations.  

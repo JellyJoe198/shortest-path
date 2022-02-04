@@ -21,14 +21,19 @@ sf::Color hsv(int hue, float sat=1, float val=1); // hue function for visual dis
 int main() {
 
     // preset inputs "fileName, heightCoeff, start(x,y), end(x,y) "
-//    std::string stringvalues = "testSurface1w.txt 6  1 3 1 1";
-//    std::string stringvalues = "testSurface1a.txt 5  9 5 0 13";
-//    std::string stringvalues = "testSurface1a.txt 4  9 0 9 14";
-//    std::string stringvalues = "mazeTestNoisy.txt 1.5 0 0 7 9"; // maze
+//    std::string stringvalues = "data/testSurface1w.txt 6  1 3 1 1";
+//    std::string stringvalues = "data/testSurface1a.txt 5  9 5 0 13";
+//    std::string stringvalues = "data/testSurface1a.txt 69  9 0 9 14";
 
-//    std::istringstream iss (stringvalues);
-//    istream& input = iss;
-    istream& input = cin;
+//    std::string stringvalues = "data/mazeTestNoisy.txt 2 0 0 7 9";
+//    std::string stringvalues = "data/mazeTest.txt 5 0 0 7 9";
+//    std::string stringvalues = "data/N39W103.hgt 5 0 0 7 9";4
+//    std::string stringvalues = "data/outputSurface1.txt 31 9 5 0 13";
+    std::string stringvalues = "data/outputSurface1.txt 5 12 0 15 9";
+
+    std::istringstream iss (stringvalues);
+    istream& input = iss;
+//    istream& input = cin;
 
     // request file name
     string fileName;
@@ -38,16 +43,20 @@ int main() {
     input >> fileName;
     cout << '(' << fileName << ")\n";
 
+    char fileType;
+    cout << "fileType: ";
+//    input >> fileType;
+
     // create surface based on our file
     World mountain(fileName);
 //    World mountain("testSurface1a.txt");
 
     // request height coefficient
     float coeff;
-    cout << "heightCoefficient: ";
+    cout << flush << "heightCoefficient: ";
     input >> coeff;
     if ( mountain.setHeightCoeff(coeff) ) {
-        cout << "error: height coefficient failed to set";
+        cerr << "error: height coefficient failed to set";
     }
     cout << '(' << mountain.getHeightCoeff() << ")\n";
 
@@ -74,10 +83,10 @@ int main() {
 
     // request start and end points
     coord<unsigned short> start, end;
-    cout << "start point (x y) ";
+    cout << "start point (row col) ";
     input >> start; // take 2 integers from stream
     cout << '(' << start.x << ' ' << start.y << ")\n";
-    cout << "end point (x y) ";
+    cout << "end point (row col) ";
     input >> end;
     cout << '(' << end.x << ' ' << end.y << ")\n";
 
@@ -90,11 +99,15 @@ int main() {
     // display shortest path to text out
     if (bestPath.empty()) {
         cout << "could not find a valid path." << endl;
-        return 0;
+//        return 0;
     } // else:
-    for(auto node : bestPath) {
-        cout << "(" << node.x << ", " << node.y << ")" << endl;
+//    for(const auto& node : bestPath) {
+    for (int i = 0; i < bestPath.size(); ++i) {
+        const auto& node = bestPath[i];
+        cout << "(" << node.x << ", " << node.y << ")";
+        if ((i+1)%10) cout << ' '; else cout << endl; // newline every 10 points
     }
+    cout << endl;
 
 
     /** display data in SFML window **/
@@ -110,7 +123,7 @@ int main() {
     // create window object
     sf::RenderWindow window(sf::VideoMode( WINDOW_SIZE.x, WINDOW_SIZE.y ), "SFML Example Window");
 
-    // draw hue key (gradient) on side for easier reading
+    // draw hue key (gradient) on side for easier human reading
     sf::RectangleShape gradient;
     const float GRADIENT_HEIGHT = (float)WINDOW_SIZE.y / MAX_HUE;
     gradient.setSize({40, GRADIENT_HEIGHT} ); // hue key fills right side of window
@@ -141,15 +154,21 @@ int main() {
             // set position and color based on location and height
             pix.setPosition(PSIZE.x*j, PSIZE.y*i);
             pix.setFillColor(hsv( // set color so min -> 0 (red), max -> MAX_HUE (pink)
-                    MAX_HUE * (mountain.getPoint(i, j).getHeight() - heightMin) / heightRange ));
+                    MAX_HUE * (mountain.getPoint(i, j).getHeight() - heightMin) / heightRange,
+                    1, 1));
 
             window.draw(pix); // draw this pixel
         }
     }
     window.display(); // show all on screen
 
+
+    // event toggles
+    bool keyDown {false};
+
     // draw loop: while our window is open, keep it open
     while( window.isOpen() ) {
+
 
         // HANDLE EVENTS
         sf::Event event;
@@ -160,20 +179,35 @@ int main() {
                     window.close();                 // then close our window
                     break;
 
-                case sf::Event::KeyReleased:
-                    // draw darker version of each pixel in path
-                    for (const auto &node : bestPath) {
-                        const auto i = node.x;
-                        const auto j = node.y;
-                        pix.setPosition(PSIZE.x * j, PSIZE.y * i);
-                        pix.setFillColor(hsv( // set color so min -> 0 (red), max -> 300 (pink)
-                                300 * (mountain.getPoint(i, j).getHeight() - heightMin) / heightRange,
-                                1 , .5));
+                case sf::Event::KeyPressed:
+                    switch (event.key.code) {
+                        case sf::Keyboard::Escape: // escape key: close window
+                            window.close();
+                            break;
+                        case sf::Keyboard::Space: { // space bar key: draw the shortest path on screen
+                            if (!keyDown) {
+                                keyDown = true;
+                                // darken each pixel in path (by redrawing with different settings)
+                                for (const auto &node: bestPath) {
+                                    const auto i = node.x; // note: node yx = window xy
+                                    const auto j = node.y;
+                                    pix.setPosition(PSIZE.x * j, PSIZE.y * i);
+                                    pix.setFillColor(hsv( // set color so min -> 0 (red), max -> 300 (pink)
+                                            300 * (mountain.getPoint(i, j).getHeight() - heightMin) / heightRange,
+                                            1, .5));
 
-                        window.draw(pix); // draw this pixel
+                                    window.draw(pix); // draw this pixel
+                                }
+                                window.display();
+                            }
+                            break;
+                        } // /space
+
                     }
-                    window.display();
+                    break; // /KeyPressed
 
+                case sf::Event::KeyReleased:
+                    keyDown = false;
                     break;
             }
         }

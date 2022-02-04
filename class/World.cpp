@@ -31,8 +31,35 @@ World::World(const string& fileName) {
         return;
     }
 
-    // read file as surface
-    auto err = readSurface(fin, 's');
+    int err = readSurface(fin, 's');;
+/*
+    // read first few bytes to determine file type
+    char filType = 's'; // default to string read
+    int i = 0; char testByte;
+    while (i<15) {
+        fin >> testByte;
+        if (testByte == 0 || testByte == '0') {
+            filType = 'b';
+        }
+        cout << testByte;
+        ++i;
+    }
+    cout << endl << endl;
+
+    int err {0x0000};
+
+    if (filType == 's') { // string type (default)
+        cout << "readType string\n";
+        // read file as surface
+        fin.seekg (0, std::ifstream::beg); // go back to beginning of file
+        err = readSurface(fin, 's');
+    }
+    else  cout << "readType byte\n";
+//*/
+    fin.close();
+
+//    auto err = readSurface(fin, 'b');
+//    auto err = readHGT(fileName);
 
     // handle errors: use bitwise logic to check if each possible error occurred
         // this is inefficient I just wanted to see if I could
@@ -45,9 +72,10 @@ World::World(const string& fileName) {
 }
 
 /// @brief reads surface from given file stream
-/// @param readType not implemented @param fin valid file stream from which to read surface
+/// @param readType s: spaced strings \n b: binary (hgt type)
+/// @param fin valid file stream from which to read surface
 /// @returns error codes:
-///     \n 0x1000: IMPORTANT linesInconsistentLength
+///     \n 0x1000: unstable linesInconsistentLength
 ///     \n 0x0100: warn emptyLines
 int World::readSurface(ifstream &fin, char readType = 0) {
 
@@ -56,42 +84,86 @@ int World::readSurface(ifstream &fin, char readType = 0) {
     bool linesInconsistentLength    {false},
          emptyLines                 {false};
 
-    while (!fin.eof()) {
-        // get each line from file
-        string line;
-        if (getline(fin, line) ) {
-            // verify that line has contents
-            if (line.empty())
-                continue;
 
+    // binary integer read
+    if (readType == 'b') {
+
+        // get length of file to know how large the array should be
+        fin.seekg (0, fin.end);
+        int length = fin.tellg();
+        fin.seekg (0, fin.beg);
+
+//        // smaller file
+//        if (length == 2* 1201*1201) {}
+
+        char tr[2];
+        uint16_t tempInt;
+        vector<vector<uint16_t>> tempMap;
+        tempMap.resize(1201, vector<uint16_t>(1201)); // make space for all height values
+        while (!fin.eof()) { // keep reading until entire file is read
+            for (int i = 0; i < 1201; ++i) {
+                for (int j = 0; j < 1201; ++j) {
+                    // read each integer (2 bytes)
+//                    fin >> tr[0] >> tr[1];
+//                    tempInt = tr[0]*( (char)(~0)+1 ) + tr[1];
+                    fin >> tempInt;
+                    tempMap[i][j] = tempInt;
+                }
+            }
+
+        } // end while
+
+        for (int i = 0; i < 1201; ++i) {
             _surface.resize(_surface.size() + 1); // make space in grid for another row
-        }
-        else { // line is empty
-            emptyLines = true;
-            continue; // skip over this line
-        }
-
-        if (isspace(line[0])) { // line only contains whitespace
-            emptyLines = true;
-            continue; // skip over this line
+            for (int j = 0; j < 1201; ++j) {
+                _surface.back().push_back(
+                        point<unsigned short>(tempMap[i][j], INF)); // add corresponding height to this point
+            }
         }
 
-        // add line to vector
-        unsigned height;
-        stringstream lin(line); // allow extraction from the line
-        while (!lin.eof()) { // extract all contents of lin
-            lin >> height;
+    // string number read
+    } else { // if (readType == 's')
+        while (!fin.eof()) {
+            // get each line from file
+            string line;
+            if (getline(fin, line)) {
+                // verify that line has contents
+                if (line.empty())
+                    continue;
+
+                _surface.resize(_surface.size() + 1); // make space in grid for another row
+            } else { // line is empty (only occurs at last line)
+//                emptyLines = true;
+                continue; // skip last line
+            }
+
+            if (isspace(line[0])) { // line only contains whitespace
+                emptyLines = true;
+                continue; // skip over this line
+            }
+
+            // add line to vector
+            unsigned height;
+            stringstream lin(line); // allow extraction from the line
+            while (!lin.eof()) { // extract all contents of lin
+                lin >> height;
 //            cout << height << ' '; //debug
-            height += (!height); // set zeros to ones (zero is reserved)
-            _surface.back().push_back(point<unsigned short>(height, INF) ); // add point to current place in current row of vector
-        }
+                height += (!height); // set zeros to ones (zero is reserved)
+                _surface.back().push_back(
+                        point<unsigned short>(height, INF)); // add point to end of current row of vector
+            }
 
-        // verify line size consistency with previous line, once it has at least 2 lines
-        if (!linesInconsistentLength && _surface.size() > 1 && _surface.back().size() != _surface.at(_surface.size() - 2 ).size()) {
-            linesInconsistentLength = true;
-        }
+            // verify line size consistency with previous line, once it has at least 2 lines
+            if (!linesInconsistentLength && _surface.size() > 1
+                && _surface.back().size() != _surface.at(_surface.size() - 2).size()) {
+                linesInconsistentLength = true;
 
-    } // end while
+                // attempt to pad shorter vectors to avoid out of range error
+//                if
+            }
+
+        } // end while
+    } // end extraction
 
 //    // handling of warning cases
 //    if (linesInconsistentLength)    // 0x1000
@@ -149,14 +221,14 @@ double World::straightLineDist(coord<T> &c1, coord<T> &c2) {
 
     // use Pythagoras to get distance between 2 points
     return sqrt(
-            // using absolute value and long cast to ensure values don't wraparound when subtracting
-            pow(abs((long)c1.x - (long)c2.x), 2)
-            + pow(abs((long)c1.y - (long)c2.y), 2)
-            + pow(abs((long)_heightCoeff * c1.getHeight() - (long)_heightCoeff * c2.getHeight()), 2)
+            // possible bug: wraparound with negatives. use long or double cast to fix.
+            pow(abs(c1.x - c2.x), 2)
+            + pow(abs(c1.y - c2.y), 2)
+            + pow(_heightCoeff * abs(c1.getHeight() - c2.getHeight()), 2)
         );
 }
 
-const short SCORE_SCALE = 16;
+const short SCORE_SCALE = 1;
 
 // how short a path from start to finish can be if it goes through n.
 template <typename T>
@@ -206,13 +278,18 @@ vcoords World::getBestPath(coord<unsigned short> start, coord<unsigned short> en
             // reconstruct path from end to start.
             vcoords shortestPath {currentNode};
             currentNode.reconstructPath(shortestPath, currentHistory);
+
+            /* currently, the path is very blocky. plan: rerun algorithm using diagonals. */
+
             return shortestPath;
         }
 
         // get neighboring nodes of current node
         vcoords neighbors;
         const coord<short> offsets[] = {
-                {1,0}, {0,1}, {-1,0}, {0,-1} };
+                {1,0}, {0,1}, {-1,0}, {0,-1},
+                {1,1}, {1,-1}, {-1,1}, {-1,-1}
+        };
         for (const auto& offset : offsets) {
             const coord<unsigned short> pos (currentNode.x + offset.x, currentNode.y + offset.y, INF);
             if(pos.x < 0 || pos.y < 0 || pos.x >= _surface.size() || pos.y >= _surface.at(pos.x).size()) // make sure we don't count nodes outside our grid
@@ -235,11 +312,10 @@ vcoords World::getBestPath(coord<unsigned short> start, coord<unsigned short> en
             if (tentative_gScore < neighbor.getgScore()) {
                 // This path to neighbor is better than any previous one. Record it!
                 // this first encounter of neighbor.gScore is always true bc gScore defaults to INF.
-//                nodeHistory.push_back(neighbor);
-//                neighbor.setCameFrom(currentNode);
                 neighbor.setCameFrom(currentPermIndex);
                 neighbor.setgScore(tentative_gScore);
-                neighbor.setfScore(SCORE_SCALE*tentative_gScore + heuristic(start, neighbor, end)); // make a guess of the short length through this node
+                // make a guess of the short length through this node
+                neighbor.setfScore(1*SCORE_SCALE*tentative_gScore + heuristic(start, neighbor, end) );
 
                 // add good neighbor to openSet if not already added
                 bool inSet = false;
@@ -324,6 +400,6 @@ sf::Vector2<unsigned> World::getHeightRange() const {
     return {min, max};
 }
 
-double World::getHeightCoeff() {
+double World::getHeightCoeff() const {
     return _heightCoeff;
 }
